@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { 
   Plus, 
+  Minus,
   ArrowDownLeft, 
   ArrowUpRight, 
   Wallet, 
@@ -14,7 +15,11 @@ import {
   Settings,
   Trash2,
   TrendingUp,
-  Package
+  Package,
+  AlertTriangle,
+  RefreshCw,
+  Box,
+  Tags
 } from 'lucide-react';
 import { 
   AreaChart, 
@@ -25,7 +30,7 @@ import {
   Tooltip, 
   ResponsiveContainer 
 } from 'recharts';
-import { Transaction, FinancialState, CATEGORIES, TransactionType } from './types';
+import { Transaction, FinancialState, CATEGORIES, TransactionType, InventoryItem, INVENTORY_CATEGORIES, InventoryCategory } from './types';
 
 // --- Utility Functions ---
 
@@ -67,8 +72,8 @@ const Modal = ({ isOpen, onClose, title, children }: { isOpen: boolean, onClose:
   if (!isOpen) return null;
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
-      <div className="bg-[#F0F7F7] dark:bg-[#051F1F] rounded-3xl w-full max-w-md overflow-hidden shadow-2xl border border-typo-teal/30">
-        <div className="p-6 border-b border-typo-teal/10 flex justify-between items-center bg-typo-teal text-white">
+      <div className="bg-[#F0F7F7] dark:bg-[#051F1F] rounded-3xl w-full max-w-md overflow-hidden shadow-2xl border border-typo-teal/30 max-h-[90vh] overflow-y-auto custom-scrollbar">
+        <div className="p-6 border-b border-typo-teal/10 flex justify-between items-center bg-typo-teal text-white sticky top-0 z-10">
           <h3 className="font-display font-bold text-xl tracking-wider uppercase">{title}</h3>
           <button onClick={onClose} className="p-1 hover:bg-white/10 rounded-full transition-colors">
             <Plus className="rotate-45 w-6 h-6" />
@@ -85,16 +90,26 @@ const Modal = ({ isOpen, onClose, title, children }: { isOpen: boolean, onClose:
 // --- Main App ---
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'ledger' | 'settings'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'ledger' | 'inventory' | 'settings'>('dashboard');
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [inventory, setInventory] = useState<InventoryItem[]>([]);
   
-  // Form State
+  // Transaction Form State
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [newTxType, setNewTxType] = useState<TransactionType>('income');
   const [amount, setAmount] = useState('');
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState('');
   
+  // Inventory Form State
+  const [isInventoryModalOpen, setIsInventoryModalOpen] = useState(false);
+  const [invName, setInvName] = useState('');
+  const [invCategory, setInvCategory] = useState<InventoryCategory>('Raw Material');
+  const [invQuantity, setInvQuantity] = useState('');
+  const [invCost, setInvCost] = useState('');
+  const [invReorder, setInvReorder] = useState('10');
+  const [logAsExpense, setLogAsExpense] = useState(false);
+
   // Search State
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -115,9 +130,14 @@ export default function App() {
     };
   }, [transactions]);
 
+  const inventoryStats = useMemo(() => {
+    const totalValue = inventory.reduce((acc, item) => acc + (item.quantity * item.unitCost), 0);
+    const lowStockItems = inventory.filter(item => item.quantity <= item.reorderLevel).length;
+    return { totalValue, lowStockItems };
+  }, [inventory]);
+
   // Chart Data
   const chartData = useMemo(() => {
-    // Group by date (simple version)
     const data: any[] = [];
     const sortedTx = [...transactions].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
     
@@ -130,12 +150,11 @@ export default function App() {
         rawDate: tx.date
       });
     });
-    
-    // Take last 7 points if too many, or all if few
     return data.slice(-10);
   }, [transactions]);
 
-  // Handlers
+  // --- Handlers ---
+
   const handleAddTransaction = () => {
     if (!amount || !description || !category) return;
     
@@ -149,37 +168,96 @@ export default function App() {
     };
 
     setTransactions(prev => [newTx, ...prev]);
-    
-    // Reset and close
     setAmount('');
     setDescription('');
     setCategory('');
     setIsAddModalOpen(false);
   };
 
-  const handleDelete = (id: string) => {
-    if (window.confirm('Are you sure you want to delete this record?')) {
+  const handleAddInventory = () => {
+    if (!invName || !invQuantity || !invCost) return;
+
+    const qty = parseInt(invQuantity);
+    const cost = parseFloat(invCost);
+    
+    const newItem: InventoryItem = {
+      id: generateId(),
+      name: invName,
+      category: invCategory,
+      quantity: qty,
+      unitCost: cost,
+      reorderLevel: parseInt(invReorder),
+      lastUpdated: new Date().toISOString()
+    };
+
+    setInventory(prev => [newItem, ...prev]);
+
+    // Optional: Log as expense
+    if (logAsExpense) {
+      const totalCost = qty * cost;
+      const expenseTx: Transaction = {
+        id: generateId(),
+        date: new Date().toISOString(),
+        amount: totalCost,
+        description: `Stock Purchase: ${invName} (x${qty})`,
+        type: 'expense',
+        category: 'Inventory (Fabric)'
+      };
+      setTransactions(prev => [expenseTx, ...prev]);
+    }
+
+    // Reset
+    setInvName('');
+    setInvCategory('Raw Material');
+    setInvQuantity('');
+    setInvCost('');
+    setLogAsExpense(false);
+    setIsInventoryModalOpen(false);
+  };
+
+  const handleAdjustStock = (id: string, adjustment: number) => {
+    setInventory(prev => prev.map(item => {
+      if (item.id === id) {
+        const newQty = Math.max(0, item.quantity + adjustment);
+        return { ...item, quantity: newQty, lastUpdated: new Date().toISOString() };
+      }
+      return item;
+    }));
+  };
+
+  const handleDeleteTransaction = (id: string) => {
+    if (window.confirm('Delete this transaction?')) {
       setTransactions(prev => prev.filter(t => t.id !== id));
     }
   };
 
+  const handleDeleteInventory = (id: string) => {
+    if (window.confirm('Remove this item from inventory?')) {
+      setInventory(prev => prev.filter(i => i.id !== id));
+    }
+  };
+
+  // --- Data Management ---
+
   const handleExport = () => {
-    const dataStr = JSON.stringify(transactions, null, 2);
+    const exportData = {
+      transactions,
+      inventory,
+      exportedAt: new Date().toISOString(),
+      version: "1.1"
+    };
+    const dataStr = JSON.stringify(exportData, null, 2);
     const blob = new Blob([dataStr], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = `typo_backup_${new Date().toISOString().split('T')[0]}.json`;
+    link.download = `typo_full_backup_${new Date().toISOString().split('T')[0]}.json`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
   };
 
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const handleImportClick = () => {
-    fileInputRef.current?.click();
-  };
 
   const handleImportFile = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -189,10 +267,16 @@ export default function App() {
     reader.onload = (e) => {
       try {
         const result = e.target?.result as string;
-        const importedData = JSON.parse(result);
-        if (Array.isArray(importedData)) {
-          setTransactions(importedData);
-          alert('Data imported successfully!');
+        const data = JSON.parse(result);
+        
+        // Handle Legacy (Array) or New (Object) format
+        if (Array.isArray(data)) {
+          setTransactions(data);
+          alert('Legacy transactions imported successfully!');
+        } else if (data.transactions || data.inventory) {
+          if (data.transactions) setTransactions(data.transactions);
+          if (data.inventory) setInventory(data.inventory);
+          alert('Full system backup imported successfully!');
         } else {
           alert('Invalid file format.');
         }
@@ -201,7 +285,6 @@ export default function App() {
       }
     };
     reader.readAsText(file);
-    // Reset input
     if (event.target) event.target.value = '';
   };
 
@@ -226,7 +309,7 @@ export default function App() {
           </div>
 
           <div className="space-y-1">
-            <p className="text-typo-accent/70 text-sm font-medium tracking-wide">Total Balance</p>
+            <p className="text-typo-accent/70 text-sm font-medium tracking-wide">Net Profit</p>
             <div className="flex items-baseline gap-2">
               <h1 className="text-4xl sm:text-5xl font-display font-bold text-white tracking-wider tabular-nums">
                 {formatMMK(financials.balance)}
@@ -275,39 +358,27 @@ export default function App() {
         </Card>
       </div>
 
-      {/* Chart */}
-      {chartData.length > 1 && (
-        <Card className="!p-0 overflow-hidden bg-white dark:bg-typo-teal h-64 flex flex-col">
-          <div className="p-6 pb-0">
-             <h3 className="font-display font-bold text-lg text-typo-dark dark:text-white">Trend Analysis</h3>
-          </div>
-          <div className="flex-1 w-full min-h-0">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={chartData} margin={{ top: 10, right: 0, left: -20, bottom: 0 }}>
-                <defs>
-                  <linearGradient id="colorBalance" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#C4ECE8" stopOpacity={0.4}/>
-                    <stop offset="95%" stopColor="#C4ECE8" stopOpacity={0}/>
-                  </linearGradient>
-                </defs>
-                <Tooltip 
-                  contentStyle={{ backgroundColor: '#051F1F', border: 'none', borderRadius: '8px', color: '#fff' }}
-                  itemStyle={{ color: '#C4ECE8' }}
-                  formatter={(value: number) => [`${formatMMK(value)}`, 'Balance']}
-                />
-                <Area 
-                  type="monotone" 
-                  dataKey="balance" 
-                  stroke="#C4ECE8" 
-                  strokeWidth={3}
-                  fillOpacity={1} 
-                  fill="url(#colorBalance)" 
-                />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
-        </Card>
-      )}
+      {/* Quick Actions */}
+      <div className="flex gap-4 overflow-x-auto pb-2 -mx-4 px-4 custom-scrollbar">
+         <button onClick={() => setIsInventoryModalOpen(true)} className="flex-none bg-white dark:bg-typo-light p-4 rounded-2xl border border-gray-100 dark:border-white/5 flex items-center gap-3 min-w-[160px] shadow-sm">
+            <div className="bg-purple-100 dark:bg-purple-900/30 p-2 rounded-lg text-purple-600 dark:text-purple-400">
+               <Box size={20} />
+            </div>
+            <div className="text-left">
+               <div className="font-bold text-sm text-typo-dark dark:text-white">Add Stock</div>
+               <div className="text-[10px] text-gray-500">Log new items</div>
+            </div>
+         </button>
+         <button onClick={() => { setActiveTab('inventory'); }} className="flex-none bg-white dark:bg-typo-light p-4 rounded-2xl border border-gray-100 dark:border-white/5 flex items-center gap-3 min-w-[160px] shadow-sm">
+            <div className="bg-orange-100 dark:bg-orange-900/30 p-2 rounded-lg text-orange-600 dark:text-orange-400">
+               <AlertTriangle size={20} />
+            </div>
+            <div className="text-left">
+               <div className="font-bold text-sm text-typo-dark dark:text-white">Check Low</div>
+               <div className="text-[10px] text-gray-500">{inventoryStats.lowStockItems} items alert</div>
+            </div>
+         </button>
+      </div>
 
       {/* Recent Transactions */}
       <div className="bg-typo-teal dark:bg-typo-teal rounded-[2rem] p-1 shadow-inner shadow-black/20">
@@ -354,6 +425,104 @@ export default function App() {
             )}
           </div>
         </div>
+      </div>
+    </div>
+  );
+
+  const InventoryView = () => (
+    <div className="space-y-6 pb-24 animate-in slide-in-from-right duration-300">
+       <div className="sticky top-0 bg-[#F0F7F7] dark:bg-[#051F1F] z-20 pb-4 pt-2">
+        <h2 className="font-display font-bold text-3xl text-typo-dark dark:text-white mb-4 pl-2">INVENTORY</h2>
+        <div className="relative">
+          <Search className="absolute left-4 top-3.5 text-gray-400 w-5 h-5" />
+          <input 
+            type="text" 
+            placeholder="Search fabric, items..." 
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full bg-white dark:bg-typo-light rounded-2xl py-3 pl-12 pr-4 text-typo-dark dark:text-white shadow-sm border-none focus:ring-2 focus:ring-typo-teal placeholder-gray-400 font-display tracking-wide"
+          />
+        </div>
+      </div>
+
+      {/* Inventory Stats */}
+      <div className="grid grid-cols-2 gap-4">
+        <Card className="!p-4 bg-typo-teal text-white">
+           <div className="text-typo-accent/80 text-xs font-bold uppercase tracking-wider mb-2">Total Value</div>
+           <div className="text-2xl font-display font-bold">{formatMMK(inventoryStats.totalValue)}</div>
+           <div className="text-[10px] opacity-60">Assets on hand</div>
+        </Card>
+        <Card className="!p-4 bg-white dark:bg-typo-light">
+           <div className="text-gray-500 dark:text-typo-accent/80 text-xs font-bold uppercase tracking-wider mb-2">Low Stock</div>
+           <div className="flex items-center gap-2">
+             <div className="text-2xl font-display font-bold text-orange-500">{inventoryStats.lowStockItems}</div>
+             {inventoryStats.lowStockItems > 0 && <AlertTriangle className="w-5 h-5 text-orange-500 animate-pulse" />}
+           </div>
+           <div className="text-[10px] text-gray-400">Items need restock</div>
+        </Card>
+      </div>
+
+      <div className="flex justify-end">
+        <Button onClick={() => setIsInventoryModalOpen(true)} className="!py-2 !px-4 text-xs">
+          <Plus className="w-4 h-4" /> Add Item
+        </Button>
+      </div>
+
+      {/* Inventory List */}
+      <div className="space-y-3">
+        {inventory
+           .filter(i => i.name.toLowerCase().includes(searchTerm.toLowerCase()) || i.category.toLowerCase().includes(searchTerm.toLowerCase()))
+           .map(item => (
+           <div key={item.id} className="bg-white dark:bg-typo-light p-4 rounded-2xl border border-gray-100 dark:border-white/5 shadow-sm">
+              <div className="flex justify-between items-start mb-3">
+                 <div className="flex gap-3">
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+                      item.category === 'Raw Material' ? 'bg-blue-100 text-blue-600' : 
+                      item.category === 'Finished Product' ? 'bg-green-100 text-green-600' :
+                      'bg-gray-100 text-gray-600'
+                    }`}>
+                      <Box size={18} />
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-typo-dark dark:text-white">{item.name}</h4>
+                      <span className="text-[10px] px-2 py-0.5 bg-gray-100 dark:bg-black/20 rounded text-gray-500 font-bold uppercase tracking-wide">{item.category}</span>
+                    </div>
+                 </div>
+                 <button onClick={() => handleDeleteInventory(item.id)} className="text-gray-300 hover:text-red-500 p-1">
+                    <Trash2 size={16} />
+                 </button>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4 border-t border-dashed border-gray-200 dark:border-white/10 pt-3 mt-1">
+                 <div>
+                    <div className="text-[10px] text-gray-400 uppercase font-bold">Unit Cost</div>
+                    <div className="text-sm font-display font-bold text-typo-dark dark:text-typo-accent">{formatMMK(item.unitCost)}</div>
+                 </div>
+                 <div className="text-right">
+                    <div className="text-[10px] text-gray-400 uppercase font-bold">Total Value</div>
+                    <div className="text-sm font-display font-bold text-typo-dark dark:text-white">{formatMMK(item.unitCost * item.quantity)}</div>
+                 </div>
+              </div>
+
+              <div className="mt-4 flex items-center justify-between bg-gray-50 dark:bg-black/20 rounded-xl p-2">
+                 <button onClick={() => handleAdjustStock(item.id, -1)} className="w-8 h-8 flex items-center justify-center bg-white dark:bg-typo-light rounded-lg shadow-sm text-gray-500 hover:text-red-500 active:scale-95 transition-all">
+                    <Minus size={14} />
+                 </button>
+                 <div className={`font-display font-bold text-lg ${item.quantity <= item.reorderLevel ? 'text-orange-500' : 'text-typo-dark dark:text-white'}`}>
+                    {item.quantity}
+                 </div>
+                 <button onClick={() => handleAdjustStock(item.id, 1)} className="w-8 h-8 flex items-center justify-center bg-white dark:bg-typo-light rounded-lg shadow-sm text-gray-500 hover:text-green-500 active:scale-95 transition-all">
+                    <Plus size={14} />
+                 </button>
+              </div>
+           </div>
+        ))}
+        {inventory.length === 0 && (
+          <div className="text-center py-10 opacity-50">
+             <Package className="w-12 h-12 mx-auto mb-2 text-gray-300" />
+             <p className="text-sm">Inventory is empty</p>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -412,7 +581,7 @@ export default function App() {
                     {tx.type === 'expense' && '-'} {formatMMK(tx.amount)}
                   </td>
                   <td className="p-4 text-center">
-                     <button onClick={() => handleDelete(tx.id)} className="text-gray-300 hover:text-red-500 transition-colors">
+                     <button onClick={() => handleDeleteTransaction(tx.id)} className="text-gray-300 hover:text-red-500 transition-colors">
                        <Trash2 className="w-4 h-4" />
                      </button>
                   </td>
@@ -447,8 +616,8 @@ export default function App() {
                     <Download className="w-5 h-5" />
                   </div>
                   <div className="text-left">
-                    <div className="font-bold text-white">Export Data</div>
-                    <div className="text-xs text-white/50">Save JSON file locally</div>
+                    <div className="font-bold text-white">Export Full Backup</div>
+                    <div className="text-xs text-white/50">Save transactions & inventory</div>
                   </div>
                 </div>
                 <div className="text-typo-accent opacity-0 group-hover:opacity-100 transition-opacity">
@@ -457,7 +626,7 @@ export default function App() {
              </button>
 
              <button 
-               onClick={handleImportClick}
+               onClick={() => fileInputRef.current?.click()}
                className="w-full bg-white/10 hover:bg-white/20 border border-white/10 rounded-xl p-4 flex items-center justify-between group transition-all"
              >
                 <div className="flex items-center gap-4">
@@ -465,7 +634,7 @@ export default function App() {
                     <Upload className="w-5 h-5" />
                   </div>
                   <div className="text-left">
-                    <div className="font-bold text-white">Import Data</div>
+                    <div className="font-bold text-white">Import Backup</div>
                     <div className="text-xs text-white/50">Restore from JSON file</div>
                   </div>
                 </div>
@@ -484,7 +653,7 @@ export default function App() {
        </Card>
 
        <div className="p-4 text-center text-xs text-gray-400">
-          <p>TYPO Business Manager v1.0</p>
+          <p>TYPO Business Manager v1.2</p>
           <p className="mt-1">Local Storage Mode • Data resides on this device</p>
        </div>
     </div>
@@ -499,7 +668,7 @@ export default function App() {
           <MoreHorizontal className="w-5 h-5" />
         </div>
         <span className="font-display font-bold text-lg tracking-widest text-typo-teal dark:text-typo-accent">
-          {activeTab === 'dashboard' ? 'DASHBOARD' : activeTab === 'ledger' ? 'TRANSACTIONS' : 'SYSTEM'}
+          {activeTab === 'dashboard' ? 'DASHBOARD' : activeTab === 'ledger' ? 'LEDGER' : activeTab === 'inventory' ? 'STOCK' : 'SYSTEM'}
         </span>
         <div className="relative">
           <div className="w-9 h-9 bg-typo-teal rounded-full flex items-center justify-center text-typo-accent border-2 border-typo-accent shadow-lg">
@@ -513,6 +682,7 @@ export default function App() {
       <main className="pt-24 px-4 max-w-md mx-auto min-h-screen relative">
         {activeTab === 'dashboard' && <DashboardView />}
         {activeTab === 'ledger' && <LedgerView />}
+        {activeTab === 'inventory' && <InventoryView />}
         {activeTab === 'settings' && <SettingsView />}
       </main>
 
@@ -542,9 +712,8 @@ export default function App() {
           </button>
 
           <button 
-            onClick={() => {}} 
-            className="p-3 rounded-full hover:bg-white/10 text-white/50 cursor-not-allowed opacity-50" 
-            title="Stock (Coming Soon)"
+            onClick={() => setActiveTab('inventory')} 
+            className={`p-3 rounded-full transition-all duration-300 ${activeTab === 'inventory' ? 'bg-white/20 text-typo-accent' : 'hover:bg-white/10 text-white/50'}`}
           >
             <Package className="w-6 h-6" />
           </button>
@@ -620,6 +789,109 @@ export default function App() {
                 className="flex-[2] bg-typo-teal text-white rounded-xl py-3 font-display font-bold tracking-wide shadow-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-typo-light transition-colors"
              >
                SAVE TRANSACTION
+             </button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Add Inventory Modal */}
+      <Modal
+        isOpen={isInventoryModalOpen}
+        onClose={() => setIsInventoryModalOpen(false)}
+        title="New Stock Item"
+      >
+        <div className="space-y-4">
+          <div>
+             <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-1">Item Name</label>
+             <input 
+               type="text" 
+               autoFocus
+               value={invName}
+               onChange={(e) => setInvName(e.target.value)}
+               className="w-full bg-white dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl p-3 font-medium text-typo-dark dark:text-white focus:ring-2 focus:ring-typo-teal/50 outline-none"
+               placeholder="e.g. White Cotton T-Shirt XL"
+             />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+             <div>
+               <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-1">Quantity</label>
+               <input 
+                 type="number" 
+                 value={invQuantity}
+                 onChange={(e) => setInvQuantity(e.target.value)}
+                 className="w-full bg-white dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl p-3 font-display font-bold text-lg text-typo-dark dark:text-white focus:ring-2 focus:ring-typo-teal/50 outline-none"
+                 placeholder="0"
+               />
+             </div>
+             <div>
+               <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-1">Unit Cost (MMK)</label>
+               <input 
+                 type="number" 
+                 value={invCost}
+                 onChange={(e) => setInvCost(e.target.value)}
+                 className="w-full bg-white dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl p-3 font-display font-bold text-lg text-typo-dark dark:text-white focus:ring-2 focus:ring-typo-teal/50 outline-none"
+                 placeholder="0"
+               />
+             </div>
+          </div>
+
+          <div>
+             <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-1">Category</label>
+             <div className="flex flex-wrap gap-2">
+                {INVENTORY_CATEGORIES.map((cat) => (
+                   <button 
+                      key={cat}
+                      onClick={() => setInvCategory(cat)}
+                      className={`px-3 py-2 rounded-lg text-xs font-bold transition-all ${
+                         invCategory === cat 
+                         ? 'bg-typo-teal text-white' 
+                         : 'bg-gray-100 dark:bg-white/5 text-gray-500 dark:text-gray-400'
+                      }`}
+                   >
+                      {cat}
+                   </button>
+                ))}
+             </div>
+          </div>
+
+          <div>
+             <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-1">Low Stock Alert Level</label>
+             <input 
+                 type="number" 
+                 value={invReorder}
+                 onChange={(e) => setInvReorder(e.target.value)}
+                 className="w-full bg-white dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl p-3 text-sm text-typo-dark dark:text-white focus:ring-2 focus:ring-typo-teal/50 outline-none"
+             />
+          </div>
+
+          <div className="bg-gray-50 dark:bg-white/5 p-4 rounded-xl flex items-center gap-3">
+             <input 
+               type="checkbox" 
+               id="logExpense" 
+               checked={logAsExpense} 
+               onChange={(e) => setLogAsExpense(e.target.checked)}
+               className="w-5 h-5 rounded text-typo-teal focus:ring-typo-teal"
+             />
+             <label htmlFor="logExpense" className="text-sm text-typo-dark dark:text-white cursor-pointer select-none">
+                <span className="font-bold block">Log as Expense?</span>
+                <span className="text-xs text-gray-500 block">Automatically add total cost to ledger</span>
+             </label>
+          </div>
+
+          <div className="pt-4 flex gap-3">
+             <button 
+                onClick={() => setIsInventoryModalOpen(false)}
+                className="flex-1 py-3 text-gray-500 font-bold text-sm hover:text-gray-700 dark:hover:text-white"
+             >
+               CANCEL
+             </button>
+             <button 
+                onClick={handleAddInventory}
+                disabled={!invName || !invQuantity || !invCost}
+                className="flex-[2] bg-typo-teal text-white rounded-xl py-3 font-display font-bold tracking-wide shadow-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-typo-light transition-colors"
+             >
+               SAVE ITEM
              </button>
           </div>
         </div>

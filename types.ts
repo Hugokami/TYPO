@@ -9,6 +9,18 @@ export interface Transaction {
   category: string;
 }
 
+export type InventoryCategory = 'Raw Material' | 'Finished Product' | 'Packaging' | 'Asset';
+
+export interface InventoryItem {
+  id: string;
+  name: string;
+  category: InventoryCategory;
+  quantity: number;
+  unitCost: number;
+  reorderLevel: number;
+  lastUpdated: string;
+}
+
 export interface FinancialState {
   transactions: Transaction[];
   balance: number;
@@ -20,3 +32,5 @@ export const CATEGORIES = {
   income: ['Sales Revenue', 'Wholesale', 'Pre-order', 'Other'],
   expense: ['Inventory (Fabric)', 'Supplies (Ink/Dye)', 'Logistics', 'Marketing', 'Rent/Utilities', 'Salary', 'Other']
 };
+
+export const INVENTORY_CATEGORIES: InventoryCategory[] = ['Raw Material', 'Finished Product', 'Packaging', 'Asset'];
