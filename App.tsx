@@ -26,7 +26,11 @@ import {
   MapPin,
   FileText,
   PieChart as PieChartIcon,
-  RotateCcw
+  RotateCcw,
+  Menu,
+  X,
+  UserCircle,
+  Briefcase
 } from 'lucide-react';
 import { 
   AreaChart, 
@@ -103,11 +107,51 @@ const Modal = ({ isOpen, onClose, title, children }: { isOpen: boolean, onClose:
 // --- Main App ---
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'ledger' | 'inventory' | 'customers' | 'settings'>('dashboard');
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [inventory, setInventory] = useState<InventoryItem[]>([]);
-  const [customers, setCustomers] = useState<Customer[]>([]);
+  // --- Persistent State Initialization ---
+  const [transactions, setTransactions] = useState<Transaction[]>(() => {
+    const saved = localStorage.getItem('typo_transactions');
+    return saved ? JSON.parse(saved) : [];
+  });
   
+  const [inventory, setInventory] = useState<InventoryItem[]>(() => {
+    const saved = localStorage.getItem('typo_inventory');
+    return saved ? JSON.parse(saved) : [];
+  });
+  
+  const [customers, setCustomers] = useState<Customer[]>(() => {
+    const saved = localStorage.getItem('typo_customers');
+    return saved ? JSON.parse(saved) : [];
+  });
+
+  const [businessProfile, setBusinessProfile] = useState(() => {
+    const saved = localStorage.getItem('typo_profile');
+    return saved ? JSON.parse(saved) : { name: 'TYPO', subtitle: 'Apparel Co.' };
+  });
+
+  // --- Persistence Effects ---
+  useEffect(() => {
+    localStorage.setItem('typo_transactions', JSON.stringify(transactions));
+  }, [transactions]);
+
+  useEffect(() => {
+    localStorage.setItem('typo_inventory', JSON.stringify(inventory));
+  }, [inventory]);
+
+  useEffect(() => {
+    localStorage.setItem('typo_customers', JSON.stringify(customers));
+  }, [customers]);
+
+  useEffect(() => {
+    localStorage.setItem('typo_profile', JSON.stringify(businessProfile));
+  }, [businessProfile]);
+
+
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'ledger' | 'inventory' | 'customers' | 'settings'>('dashboard');
+  
+  // UI States
+  const [showMenu, setShowMenu] = useState(false);
+  const [showProfileModal, setShowProfileModal] = useState(false);
+
   // Transaction Form State
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editingTxId, setEditingTxId] = useState<string | null>(null);
@@ -133,6 +177,10 @@ export default function App() {
   const [custAddress, setCustAddress] = useState('');
   const [custNotes, setCustNotes] = useState('');
   const [editingCustId, setEditingCustId] = useState<string | null>(null);
+
+  // Profile Form State
+  const [profName, setProfName] = useState(businessProfile.name);
+  const [profSubtitle, setProfSubtitle] = useState(businessProfile.subtitle);
 
   // Search State
   const [searchTerm, setSearchTerm] = useState('');
@@ -359,14 +407,21 @@ export default function App() {
   };
 
   const handleResetData = () => {
-    if (window.confirm("WARNING: This will delete ALL transactions, inventory, and customers. This cannot be undone.")) {
+    if (window.confirm("WARNING: This will delete ALL transactions, inventory, and customers from this device. This cannot be undone.")) {
        if (window.confirm("Are you absolutely sure?")) {
          setTransactions([]);
          setInventory([]);
          setCustomers([]);
+         localStorage.clear();
          alert("All data has been reset to 0.");
+         setShowMenu(false);
        }
     }
+  };
+
+  const handleSaveProfile = () => {
+    setBusinessProfile({ name: profName, subtitle: profSubtitle });
+    setShowProfileModal(false);
   };
 
   // --- Data Management ---
@@ -376,18 +431,20 @@ export default function App() {
       transactions,
       inventory,
       customers,
+      profile: businessProfile,
       exportedAt: new Date().toISOString(),
-      version: "1.2"
+      version: "1.3"
     };
     const dataStr = JSON.stringify(exportData, null, 2);
     const blob = new Blob([dataStr], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = `typo_full_backup_${new Date().toISOString().split('T')[0]}.json`;
+    link.download = `typo_backup_${new Date().toISOString().split('T')[0]}.json`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    setShowMenu(false);
   };
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -409,6 +466,7 @@ export default function App() {
           if (data.transactions) setTransactions(data.transactions);
           if (data.inventory) setInventory(data.inventory);
           if (data.customers) setCustomers(data.customers);
+          if (data.profile) setBusinessProfile(data.profile);
           alert('Full system backup imported successfully!');
         } else {
           alert('Invalid file format.');
@@ -419,6 +477,7 @@ export default function App() {
     };
     reader.readAsText(file);
     if (event.target) event.target.value = '';
+    setShowMenu(false);
   };
 
   // --- Views ---
@@ -433,8 +492,8 @@ export default function App() {
         <div className="relative z-10">
           <div className="flex justify-between items-start mb-8">
             <div>
-              <h2 className="font-display font-bold text-4xl tracking-tight">TYPO</h2>
-              <p className="text-typo-accent/80 text-xs uppercase tracking-[0.2em] font-medium mt-1">Apparel Co.</p>
+              <h2 className="font-display font-bold text-4xl tracking-tight">{businessProfile.name}</h2>
+              <p className="text-typo-accent/80 text-xs uppercase tracking-[0.2em] font-medium mt-1">{businessProfile.subtitle}</p>
             </div>
             <div className="bg-white/10 p-2.5 rounded-xl backdrop-blur-md border border-white/10">
               <Package className="text-typo-accent w-6 h-6" />
@@ -732,7 +791,7 @@ export default function App() {
                 )
                 .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
                 .map((tx) => (
-                <tr key={tx.id} className="hover:bg-gray-50 dark:hover:bg-white/5 transition-colors group">
+                <tr key={tx.id} onClick={() => openEditTxModal(tx)} className="hover:bg-gray-50 dark:hover:bg-white/5 transition-colors group cursor-pointer">
                   <td className="p-4 text-gray-500 dark:text-gray-400 whitespace-nowrap font-mono text-xs">
                     {new Date(tx.date).toLocaleDateString()}
                   </td>
@@ -750,10 +809,10 @@ export default function App() {
                     {tx.type === 'expense' && '-'} {formatMMK(tx.amount)}
                   </td>
                   <td className="p-4 text-center flex items-center justify-center gap-2">
-                     <button onClick={() => openEditTxModal(tx)} className="text-gray-300 hover:text-typo-teal dark:hover:text-typo-accent transition-colors">
+                     <button onClick={(e) => { e.stopPropagation(); openEditTxModal(tx); }} className="text-gray-300 hover:text-typo-teal dark:hover:text-typo-accent transition-colors">
                         <Edit2 className="w-4 h-4" />
                      </button>
-                     <button onClick={() => handleDeleteTransaction(tx.id)} className="text-gray-300 hover:text-red-500 transition-colors">
+                     <button onClick={(e) => { e.stopPropagation(); handleDeleteTransaction(tx.id); }} className="text-gray-300 hover:text-red-500 transition-colors">
                        <Trash2 className="w-4 h-4" />
                      </button>
                   </td>
@@ -905,7 +964,7 @@ export default function App() {
        </Card>
 
        <div className="p-4 text-center text-xs text-gray-400">
-          <p>TYPO Business Manager v1.3</p>
+          <p>TYPO Business Manager v1.4</p>
           <p className="mt-1">Local Storage Mode • Data resides on this device</p>
        </div>
     </div>
@@ -916,17 +975,44 @@ export default function App() {
       
       {/* Top Navigation */}
       <nav className="fixed top-0 w-full z-40 bg-[#F0F7F7]/80 dark:bg-[#051F1F]/80 backdrop-blur-md px-6 py-4 flex items-center justify-between max-w-md left-1/2 -translate-x-1/2">
-        <div className="bg-typo-teal text-white p-2 rounded-lg shadow-lg">
-          <MoreHorizontal className="w-5 h-5" />
+        <div className="relative">
+          <button 
+            onClick={() => setShowMenu(!showMenu)}
+            className="bg-typo-teal text-white p-2 rounded-lg shadow-lg hover:bg-typo-light transition-colors"
+          >
+            {showMenu ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+          </button>
+
+          {/* Quick Menu Dropdown */}
+          {showMenu && (
+            <div className="absolute top-12 left-0 bg-white dark:bg-typo-light border border-gray-100 dark:border-white/10 rounded-2xl shadow-xl w-48 overflow-hidden animate-in slide-in-from-top-2 duration-200">
+              <div className="p-2 space-y-1">
+                 <button onClick={handleExport} className="w-full text-left px-3 py-2 rounded-xl text-sm font-medium text-gray-700 dark:text-white hover:bg-gray-100 dark:hover:bg-white/10 flex items-center gap-2">
+                   <Download size={14} /> Export Data
+                 </button>
+                 <button onClick={() => fileInputRef.current?.click()} className="w-full text-left px-3 py-2 rounded-xl text-sm font-medium text-gray-700 dark:text-white hover:bg-gray-100 dark:hover:bg-white/10 flex items-center gap-2">
+                   <Upload size={14} /> Import Data
+                 </button>
+                 <div className="h-px bg-gray-100 dark:bg-white/10 my-1"></div>
+                 <button onClick={handleResetData} className="w-full text-left px-3 py-2 rounded-xl text-sm font-medium text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-2">
+                   <RotateCcw size={14} /> Reset App
+                 </button>
+              </div>
+            </div>
+          )}
         </div>
+
         <span className="font-display font-bold text-lg tracking-widest text-typo-teal dark:text-typo-accent">
           {activeTab === 'dashboard' ? 'DASHBOARD' : activeTab === 'ledger' ? 'LEDGER' : activeTab === 'inventory' ? 'STOCK' : activeTab === 'customers' ? 'CRM' : 'SYSTEM'}
         </span>
+        
         <div className="relative">
-          <div className="w-9 h-9 bg-typo-teal rounded-full flex items-center justify-center text-typo-accent border-2 border-typo-accent shadow-lg">
-             <span className="font-display font-bold">T</span>
-          </div>
-          <div className="absolute top-0 right-0 w-3 h-3 bg-green-400 rounded-full border-2 border-[#F0F7F7] dark:border-[#051F1F]"></div>
+          <button onClick={() => setShowProfileModal(true)} className="relative block">
+            <div className="w-9 h-9 bg-typo-teal rounded-full flex items-center justify-center text-typo-accent border-2 border-typo-accent shadow-lg">
+               <span className="font-display font-bold">{businessProfile.name.charAt(0)}</span>
+            </div>
+            <div className="absolute top-0 right-0 w-3 h-3 bg-green-400 rounded-full border-2 border-[#F0F7F7] dark:border-[#051F1F]"></div>
+          </button>
         </div>
       </nav>
 
@@ -1236,6 +1322,64 @@ export default function App() {
                </button>
             </div>
          </div>
+      </Modal>
+
+      {/* Business Profile Modal */}
+      <Modal
+        isOpen={showProfileModal}
+        onClose={() => setShowProfileModal(false)}
+        title="Business Profile"
+      >
+        <div className="space-y-4">
+           <div className="flex justify-center mb-6">
+              <div className="w-20 h-20 bg-typo-teal rounded-full flex items-center justify-center text-typo-accent border-4 border-typo-accent shadow-xl text-3xl font-display font-bold">
+                 {profName.charAt(0)}
+              </div>
+           </div>
+
+           <div>
+              <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-1">Business Name</label>
+              <input 
+                type="text" 
+                value={profName}
+                onChange={(e) => setProfName(e.target.value)}
+                className="w-full bg-white dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl p-3 font-display font-bold text-xl text-typo-dark dark:text-white focus:ring-2 focus:ring-typo-teal/50 outline-none"
+              />
+           </div>
+
+           <div>
+              <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-1">Subtitle / Slogan</label>
+              <input 
+                type="text" 
+                value={profSubtitle}
+                onChange={(e) => setProfSubtitle(e.target.value)}
+                className="w-full bg-white dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl p-3 text-sm text-typo-dark dark:text-white focus:ring-2 focus:ring-typo-teal/50 outline-none"
+              />
+           </div>
+
+           <div className="bg-blue-50 dark:bg-blue-900/10 p-4 rounded-xl flex items-start gap-3 mt-4">
+              <UserCircle className="w-5 h-5 text-blue-500 shrink-0 mt-0.5" />
+              <div>
+                 <p className="text-sm font-bold text-blue-700 dark:text-blue-300">Local Profile</p>
+                 <p className="text-xs text-blue-600/70 dark:text-blue-400/70 mt-1">This information is displayed on your dashboard and invoices.</p>
+              </div>
+           </div>
+
+           <div className="pt-4 flex gap-3">
+             <button 
+                onClick={() => setShowProfileModal(false)}
+                className="flex-1 py-3 text-gray-500 font-bold text-sm hover:text-gray-700 dark:hover:text-white"
+             >
+               CANCEL
+             </button>
+             <button 
+                onClick={handleSaveProfile}
+                className="flex-[2] bg-typo-teal text-white rounded-xl py-3 font-display font-bold tracking-wide shadow-lg hover:bg-typo-light transition-colors"
+             >
+               SAVE PROFILE
+             </button>
+          </div>
+        </div>
       </Modal>
 
     </div>
