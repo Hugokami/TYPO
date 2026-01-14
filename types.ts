@@ -26,7 +26,10 @@ export interface InventoryItem {
   name: string;
   category: InventoryCategory;
   quantity: number;
-  unitCost: number;
+  unitCost: number; // Cost to buy/make
+  unitPrice: number; // Selling Price
+  size: string;
+  color: string;
   reorderLevel: number;
   lastUpdated: string;
 }

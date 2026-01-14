@@ -31,7 +31,10 @@ import {
   BrainCircuit,
   TrendingDown,
   Activity,
-  Lightbulb
+  Lightbulb,
+  ShoppingBag,
+  Tag,
+  Calculator
 } from 'lucide-react';
 import { 
   AreaChart, 
@@ -93,14 +96,12 @@ const Modal = ({ isOpen, onClose, title, children }: { isOpen: boolean, onClose:
   if (!isOpen) return null;
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
-      <div className="bg-[#051F1F] rounded-2xl w-full max-w-md overflow-hidden shadow-2xl border border-white/10 max-h-[90vh] overflow-y-auto custom-scrollbar">
-        <div className="p-6 border-b border-white/10 flex justify-between items-center bg-[#021212]">
-          <h3 className="font-display font-bold text-xl tracking-wider uppercase text-white">{title}</h3>
-          <button onClick={onClose} className="p-1 hover:bg-white/10 rounded-full transition-colors text-white">
+      <div className="bg-[#051F1F] rounded-2xl w-full max-w-md overflow-hidden shadow-2xl border border-white/10 max-h-[90vh] overflow-y-auto custom-scrollbar relative">
+        <button onClick={onClose} className="absolute top-4 right-4 p-2 hover:bg-white/10 rounded-full transition-colors text-white/50 hover:text-white z-10">
             <X className="w-5 h-5" />
-          </button>
-        </div>
-        <div className="p-6">
+        </button>
+        <div className="p-8">
+          <h3 className="font-display font-bold text-2xl tracking-wide text-white mb-6">{title}</h3>
           {children}
         </div>
       </div>
@@ -143,7 +144,7 @@ export default function App() {
   // UI States
   const [showProfileModal, setShowProfileModal] = useState(false);
 
-  // Forms
+  // Transaction Form
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editingTxId, setEditingTxId] = useState<string | null>(null);
   const [newTxType, setNewTxType] = useState<TransactionType>('income');
@@ -151,14 +152,24 @@ export default function App() {
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState('');
   
+  // Inventory Form
   const [isInventoryModalOpen, setIsInventoryModalOpen] = useState(false);
   const [invName, setInvName] = useState('');
-  const [invCategory, setInvCategory] = useState<InventoryCategory>('Raw Material');
+  const [invCategory, setInvCategory] = useState<InventoryCategory>('Finished Product');
   const [invQuantity, setInvQuantity] = useState('');
   const [invCost, setInvCost] = useState('');
+  const [invPrice, setInvPrice] = useState(''); // New: Selling Price
+  const [invSize, setInvSize] = useState(''); // New: Size
+  const [invColor, setInvColor] = useState(''); // New: Color
   const [invReorder, setInvReorder] = useState('10');
   const [logAsExpense, setLogAsExpense] = useState(false);
 
+  // Quick Sell Modal State
+  const [isQuickSellOpen, setIsQuickSellOpen] = useState(false);
+  const [selectedItemForSale, setSelectedItemForSale] = useState<InventoryItem | null>(null);
+  const [saleQuantity, setSaleQuantity] = useState('1');
+
+  // Customer Form
   const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false);
   const [custName, setCustName] = useState('');
   const [custPhone, setCustPhone] = useState('');
@@ -167,11 +178,13 @@ export default function App() {
   const [custNotes, setCustNotes] = useState('');
   const [editingCustId, setEditingCustId] = useState<string | null>(null);
 
+  // Profile Form
   const [profName, setProfName] = useState(businessProfile.name);
   const [profSubtitle, setProfSubtitle] = useState(businessProfile.subtitle);
   const [profOwner, setProfOwner] = useState(businessProfile.owner);
 
   const [searchTerm, setSearchTerm] = useState('');
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Derived State
   const financials: FinancialState = useMemo(() => {
@@ -181,9 +194,10 @@ export default function App() {
   }, [transactions]);
 
   const inventoryStats = useMemo(() => {
-    const totalValue = inventory.reduce((acc, item) => acc + (item.quantity * item.unitCost), 0);
+    const totalCostValue = inventory.reduce((acc, item) => acc + (item.quantity * item.unitCost), 0);
+    const totalRetailValue = inventory.reduce((acc, item) => acc + (item.quantity * (item.unitPrice || item.unitCost)), 0);
     const lowStockItems = inventory.filter(item => item.quantity <= item.reorderLevel).length;
-    return { totalValue, lowStockItems };
+    return { totalCostValue, totalRetailValue, lowStockItems };
   }, [inventory]);
 
   const chartData = useMemo(() => {
@@ -239,28 +253,39 @@ export default function App() {
     if (window.confirm('Delete this transaction?')) setTransactions(prev => prev.filter(t => t.id !== id));
   };
   
+  // Enhanced Inventory Handler
   const handleAddInventory = () => {
     if (!invName || !invQuantity || !invCost) return;
     const qty = parseInt(invQuantity);
     const cost = parseFloat(invCost);
+    const price = invPrice ? parseFloat(invPrice) : 0;
+    
     const newItem: InventoryItem = {
       id: generateId(),
       name: invName,
       category: invCategory,
       quantity: qty,
       unitCost: cost,
+      unitPrice: price,
+      size: invSize,
+      color: invColor,
       reorderLevel: parseInt(invReorder),
       lastUpdated: new Date().toISOString()
     };
+    
     setInventory(prev => [newItem, ...prev]);
+    
     if (logAsExpense) {
       setTransactions(prev => [{
         id: generateId(), date: new Date().toISOString(), amount: qty * cost,
-        description: `Stock Purchase: ${invName} (x${qty})`, type: 'expense', category: 'Inventory (Fabric)'
+        description: `Stock Purchase: ${invName} ${invSize} ${invColor} (x${qty})`, type: 'expense', category: 'Inventory (Fabric)'
       }, ...prev]);
     }
-    setInvName(''); setInvCategory('Raw Material'); setInvQuantity(''); setInvCost(''); setIsInventoryModalOpen(false);
+    // Reset Form
+    setInvName(''); setInvCategory('Finished Product'); setInvQuantity(''); setInvCost(''); setInvPrice(''); setInvSize(''); setInvColor('');
+    setIsInventoryModalOpen(false);
   };
+
   const handleDeleteInventory = (id: string) => {
     if (window.confirm('Remove item?')) setInventory(prev => prev.filter(i => i.id !== id));
   };
@@ -268,21 +293,71 @@ export default function App() {
     setInventory(prev => prev.map(i => i.id === id ? { ...i, quantity: Math.max(0, i.quantity + val) } : i));
   };
 
-  const handleSaveCustomer = () => {
-    if (!custName) return;
-    const newC: Customer = {
-      id: editingCustId || generateId(),
-      name: custName, phone: custPhone, email: custEmail, address: custAddress, notes: custNotes, totalSpent: 0
+  // Quick Sell Handler
+  const openQuickSell = (item: InventoryItem) => {
+    setSelectedItemForSale(item);
+    setSaleQuantity('1');
+    setIsQuickSellOpen(true);
+  };
+
+  const executeQuickSell = () => {
+    if (!selectedItemForSale || !saleQuantity) return;
+    
+    const qty = parseInt(saleQuantity);
+    if (qty > selectedItemForSale.quantity) {
+        alert("Not enough stock!");
+        return;
+    }
+
+    // 1. Deduct Stock
+    setInventory(prev => prev.map(i => i.id === selectedItemForSale.id ? { ...i, quantity: i.quantity - qty } : i));
+
+    // 2. Add Income Transaction
+    const totalSaleAmount = qty * selectedItemForSale.unitPrice;
+    const newTx: Transaction = {
+        id: generateId(),
+        date: new Date().toISOString(),
+        amount: totalSaleAmount,
+        description: `Sale: ${selectedItemForSale.name} (${selectedItemForSale.size || ''} ${selectedItemForSale.color || ''}) x${qty}`,
+        type: 'income',
+        category: 'Sales Revenue'
     };
-    if (editingCustId) setCustomers(prev => prev.map(c => c.id === editingCustId ? newC : c));
-    else setCustomers(prev => [...prev, newC]);
-    setIsCustomerModalOpen(false);
+    setTransactions(prev => [newTx, ...prev]);
+    
+    setIsQuickSellOpen(false);
+    setSelectedItemForSale(null);
+  };
+
+  const handleImportBackup = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const json = e.target?.result as string;
+        const data = JSON.parse(json);
+        
+        if (window.confirm("Importing will overwrite your current data. Are you sure you want to continue?")) {
+            if (Array.isArray(data.transactions)) setTransactions(data.transactions);
+            if (Array.isArray(data.inventory)) setInventory(data.inventory);
+            if (Array.isArray(data.customers)) setCustomers(data.customers);
+            if (data.profile) setBusinessProfile(data.profile);
+            alert("Backup imported successfully!");
+        }
+      } catch (error) {
+        alert("Error importing file: Invalid format.");
+        console.error(error);
+      }
+    };
+    reader.readAsText(file);
+    event.target.value = ''; 
   };
 
   const handleResetData = () => {
-    if (window.confirm("WARNING: Wipe all data?")) {
-      setTransactions([]); setInventory([]); setCustomers([]);
+    if (window.confirm("WARNING: This will wipe ALL data and cannot be undone. Are you sure?")) {
       localStorage.clear();
+      window.location.reload();
     }
   };
 
@@ -375,6 +450,35 @@ export default function App() {
         </div>
 
         <div className="grid grid-cols-3 gap-6">
+           <Card className="col-span-1 bg-[#1A1A1A] border-l-4 border-purple-500">
+               <div className="flex items-center gap-3 mb-2">
+                   <div className="p-2 bg-purple-500/20 rounded-lg text-purple-400"><Tag size={20} /></div>
+                   <h3 className="font-bold text-white">Potential Revenue</h3>
+               </div>
+               <p className="text-2xl font-display font-bold text-white">{formatMMK(inventoryStats.totalRetailValue)}</p>
+               <p className="text-xs text-gray-500 mt-1">If all current stock is sold</p>
+           </Card>
+
+           <Card className="col-span-1 bg-[#1A1A1A] border-l-4 border-orange-500">
+               <div className="flex items-center gap-3 mb-2">
+                   <div className="p-2 bg-orange-500/20 rounded-lg text-orange-400"><Box size={20} /></div>
+                   <h3 className="font-bold text-white">Stock Value (Cost)</h3>
+               </div>
+               <p className="text-2xl font-display font-bold text-white">{formatMMK(inventoryStats.totalCostValue)}</p>
+               <p className="text-xs text-gray-500 mt-1">Total investment in goods</p>
+           </Card>
+
+           <Card className="col-span-1 bg-[#1A1A1A] border-l-4 border-blue-500">
+               <div className="flex items-center gap-3 mb-2">
+                   <div className="p-2 bg-blue-500/20 rounded-lg text-blue-400"><TrendingUp size={20} /></div>
+                   <h3 className="font-bold text-white">Potential Profit</h3>
+               </div>
+               <p className="text-2xl font-display font-bold text-white">{formatMMK(inventoryStats.totalRetailValue - inventoryStats.totalCostValue)}</p>
+               <p className="text-xs text-gray-500 mt-1">Revenue minus Cost</p>
+           </Card>
+        </div>
+
+        <div className="grid grid-cols-3 gap-6">
            <Card className="col-span-2">
               <div className="flex justify-between items-center mb-4">
                  <h3 className="font-bold text-white">Recent Transactions</h3>
@@ -423,16 +527,17 @@ export default function App() {
   };
 
   const ConsultantView = () => {
-    // Basic heuristics for "AI" advice
+    // Advanced heuristics
     const netProfit = financials.totalIncome - financials.totalExpense;
     const margin = financials.totalIncome > 0 ? (netProfit / financials.totalIncome) * 100 : 0;
-    const burnRate = financials.totalExpense / (transactions.length > 0 ? transactions.length : 1); // Avg expense per tx (simplified)
-    const inventoryVal = inventoryStats.totalValue;
+    const potentialProfit = inventoryStats.totalRetailValue - inventoryStats.totalCostValue;
+    const stockEfficiency = inventoryStats.totalCostValue > 0 ? (financials.totalIncome / inventoryStats.totalCostValue) : 0;
 
     let advice = "Your business is just starting. Keep tracking!";
     if (margin > 30) advice = "Excellent profit margin! Consider reinvesting surplus into high-performing inventory.";
     else if (margin < 10 && financials.totalIncome > 0) advice = "Margins are tight. Review your supplier costs or consider raising prices.";
     if (netProfit < 0) advice = "You are currently operating at a loss. Focus on high-margin sales and reducing overhead.";
+    if (potentialProfit > 500000 && financials.balance < 100000) advice = "You have a lot of value tied up in stock. Run a promotion to increase cash flow.";
 
     return (
        <div className="space-y-6 animate-in slide-in-from-right duration-300">
@@ -451,24 +556,24 @@ export default function App() {
                      {margin.toFixed(1)}%
                   </span>
                </div>
-               <p className="text-gray-400 text-xs uppercase tracking-wider font-bold">Net Profit Margin</p>
+               <p className="text-gray-400 text-xs uppercase tracking-wider font-bold">Realized Profit Margin</p>
                <h3 className="text-2xl font-display font-bold text-white mt-1">{margin > 0 ? 'Healthy' : 'Needs Work'}</h3>
             </Card>
 
             <Card className="bg-gradient-to-br from-orange-900/40 to-typo-dark border-orange-500/20">
                <div className="flex items-start justify-between mb-4">
-                  <div className="p-2 bg-orange-500/20 rounded-lg text-orange-400"><Activity size={20} /></div>
+                  <div className="p-2 bg-orange-500/20 rounded-lg text-orange-400"><Calculator size={20} /></div>
                </div>
-               <p className="text-gray-400 text-xs uppercase tracking-wider font-bold">Burn Rate (Avg/Tx)</p>
-               <h3 className="text-2xl font-display font-bold text-white mt-1">{formatMMK(burnRate)}</h3>
+               <p className="text-gray-400 text-xs uppercase tracking-wider font-bold">Projected Profit (Stock)</p>
+               <h3 className="text-2xl font-display font-bold text-white mt-1">{formatMMK(potentialProfit)}</h3>
             </Card>
 
             <Card className="bg-gradient-to-br from-blue-900/40 to-typo-dark border-blue-500/20">
                <div className="flex items-start justify-between mb-4">
                   <div className="p-2 bg-blue-500/20 rounded-lg text-blue-400"><Box size={20} /></div>
                </div>
-               <p className="text-gray-400 text-xs uppercase tracking-wider font-bold">Inventory Value</p>
-               <h3 className="text-2xl font-display font-bold text-white mt-1">{formatMMK(inventoryVal)}</h3>
+               <p className="text-gray-400 text-xs uppercase tracking-wider font-bold">Stock Efficiency Ratio</p>
+               <h3 className="text-2xl font-display font-bold text-white mt-1">{stockEfficiency.toFixed(2)}x</h3>
             </Card>
          </div>
 
@@ -564,7 +669,7 @@ export default function App() {
             
             <div className="flex items-center gap-4">
                {activeTab !== 'dashboard' && (
-                  <div className="bg-[#0E2A2A] px-4 py-2 rounded-lg border border-white/5">
+                  <div className="bg-[#0E2A2A] px-4 py-2 rounded-lg border border-white/5 hidden md:block">
                      <span className="text-xs text-gray-400 block">CURRENT BALANCE</span>
                      <span className="text-sm font-bold text-typo-accent">{formatMMK(financials.balance)}</span>
                   </div>
@@ -635,35 +740,65 @@ export default function App() {
                      </div>
                   </div>
 
-                  <div className="grid grid-cols-4 gap-6">
-                     {inventory.filter(i => i.name.toLowerCase().includes(searchTerm.toLowerCase())).map(item => (
-                        <div key={item.id} className="bg-[#0E2A2A] p-4 rounded-2xl border border-white/5 hover:border-typo-teal/50 transition-colors group relative">
-                           <button onClick={() => handleDeleteInventory(item.id)} className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 p-1.5 hover:bg-red-500/20 text-red-500 rounded-lg transition-all">
-                              <Trash2 size={14} />
-                           </button>
-                           <div className="flex gap-3 mb-3">
-                              <div className="w-10 h-10 rounded-xl bg-typo-teal/20 text-typo-accent flex items-center justify-center">
-                                 <Package size={20} />
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                     {inventory.filter(i => i.name.toLowerCase().includes(searchTerm.toLowerCase())).map(item => {
+                         const margin = item.unitPrice && item.unitCost ? ((item.unitPrice - item.unitCost) / item.unitPrice * 100).toFixed(0) : 0;
+                         return (
+                        <div key={item.id} className="bg-[#0E2A2A] p-5 rounded-2xl border border-white/5 hover:border-typo-teal/50 transition-colors group relative flex flex-col">
+                           <div className="flex justify-between items-start mb-3">
+                              <div className="flex gap-3">
+                                <div className="w-12 h-12 rounded-xl bg-typo-teal/20 text-typo-accent flex items-center justify-center shrink-0">
+                                    <Shirt size={22} />
+                                </div>
+                                <div>
+                                    <h4 className="font-bold text-white leading-tight mb-1">{item.name}</h4>
+                                    <div className="flex gap-2 text-[10px] uppercase font-bold tracking-wide">
+                                        {item.size && <span className="bg-white/10 text-gray-300 px-1.5 py-0.5 rounded">{item.size}</span>}
+                                        {item.color && <span className="bg-white/10 text-gray-300 px-1.5 py-0.5 rounded">{item.color}</span>}
+                                    </div>
+                                </div>
                               </div>
-                              <div>
-                                 <h4 className="font-bold text-white leading-tight">{item.name}</h4>
-                                 <span className="text-[10px] text-gray-400 uppercase tracking-wide">{item.category}</span>
+                              <button onClick={() => handleDeleteInventory(item.id)} className="text-gray-600 hover:text-red-500 transition-colors">
+                                  <Trash2 size={16} />
+                              </button>
+                           </div>
+
+                           <div className="grid grid-cols-2 gap-2 mb-4 bg-black/20 p-3 rounded-xl border border-white/5">
+                                <div>
+                                    <span className="block text-[10px] text-gray-500 uppercase font-bold">Cost</span>
+                                    <span className="text-white font-mono text-sm">{formatMMK(item.unitCost)}</span>
+                                </div>
+                                <div>
+                                    <span className="block text-[10px] text-gray-500 uppercase font-bold">Price</span>
+                                    <span className="text-typo-accent font-bold font-mono text-sm">{item.unitPrice ? formatMMK(item.unitPrice) : '-'}</span>
+                                </div>
+                           </div>
+
+                           <div className="mt-auto pt-2 border-t border-white/5 flex items-center justify-between">
+                              <div className="flex items-center gap-2">
+                                  <button onClick={() => handleAdjustStock(item.id, -1)} className="w-8 h-8 rounded-lg bg-white/5 hover:bg-white/10 flex items-center justify-center"><Minus size={14} /></button>
+                                  <span className={`font-bold min-w-[3ch] text-center ${item.quantity <= item.reorderLevel ? 'text-orange-400' : 'text-white'}`}>{item.quantity}</span>
+                                  <button onClick={() => handleAdjustStock(item.id, 1)} className="w-8 h-8 rounded-lg bg-white/5 hover:bg-white/10 flex items-center justify-center"><Plus size={14} /></button>
                               </div>
+                              <Button onClick={() => openQuickSell(item)} variant="success" className="!py-1.5 !px-3 !text-xs !rounded-lg">
+                                  Sell
+                              </Button>
                            </div>
-                           <div className="grid grid-cols-2 gap-2 text-xs mb-3 bg-black/20 p-2 rounded-lg">
-                              <div><span className="block text-gray-500">Cost</span>{formatMMK(item.unitCost)}</div>
-                              <div className="text-right"><span className="block text-gray-500">Value</span>{formatMMK(item.unitCost * item.quantity)}</div>
-                           </div>
-                           <div className="flex items-center justify-between">
-                              <button onClick={() => handleAdjustStock(item.id, -1)} className="w-8 h-8 rounded-lg bg-white/5 hover:bg-white/10 flex items-center justify-center"><Minus size={14} /></button>
-                              <span className={`font-bold ${item.quantity <= item.reorderLevel ? 'text-orange-400' : 'text-white'}`}>{item.quantity} Units</span>
-                              <button onClick={() => handleAdjustStock(item.id, 1)} className="w-8 h-8 rounded-lg bg-white/5 hover:bg-white/10 flex items-center justify-center"><Plus size={14} /></button>
-                           </div>
+                           
+                           {Number(margin) > 0 && (
+                               <div className="absolute -top-2 -right-2 bg-green-500 text-black text-[10px] font-bold px-2 py-1 rounded-full shadow-lg">
+                                   {margin}% Margin
+                               </div>
+                           )}
                         </div>
-                     ))}
-                     <button onClick={() => setIsInventoryModalOpen(true)} className="border-2 border-dashed border-white/10 rounded-2xl p-4 flex flex-col items-center justify-center text-gray-500 hover:text-white hover:border-typo-teal/50 transition-all min-h-[200px]">
-                        <Plus size={32} className="mb-2" />
-                        <span className="font-bold text-sm">Add New Item</span>
+                     )})}
+                     
+                     <button onClick={() => setIsInventoryModalOpen(true)} className="border-2 border-dashed border-white/10 rounded-2xl p-4 flex flex-col items-center justify-center text-gray-500 hover:text-white hover:border-typo-teal/50 transition-all min-h-[220px]">
+                        <div className="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center mb-3 group-hover:bg-typo-accent group-hover:text-typo-teal transition-colors">
+                            <Plus size={24} />
+                        </div>
+                        <span className="font-bold text-sm">Add New Product</span>
+                        <span className="text-xs text-gray-600 mt-1 text-center px-4">Add fabric, finished shirts, or assets</span>
                      </button>
                   </div>
                </div>
@@ -684,6 +819,20 @@ export default function App() {
                            const url = URL.createObjectURL(blob);
                            const link = document.createElement('a'); link.href = url; link.download = 'typo_backup.json'; link.click();
                         }} variant="secondary" className="w-full justify-start"><Download size={16}/> Export Backup</Button>
+                        
+                        <div className="relative">
+                            <input 
+                                type="file" 
+                                ref={fileInputRef} 
+                                onChange={handleImportBackup} 
+                                className="hidden" 
+                                accept=".json"
+                            />
+                            <Button onClick={() => fileInputRef.current?.click()} variant="secondary" className="w-full justify-start">
+                                <Upload size={16}/> Import Backup
+                            </Button>
+                        </div>
+
                         <Button onClick={handleResetData} variant="danger" className="w-full justify-start"><RotateCcw size={16}/> Reset Everything</Button>
                      </div>
                   </Card>
@@ -709,23 +858,106 @@ export default function App() {
       </Modal>
 
       {/* Inventory Modal */}
-      <Modal isOpen={isInventoryModalOpen} onClose={() => setIsInventoryModalOpen(false)} title="New Product">
-         <div className="space-y-4">
-            <input type="text" autoFocus value={invName} onChange={(e) => setInvName(e.target.value)} placeholder="Product Name" className="w-full bg-black/20 border border-white/10 rounded-xl p-3 text-white focus:border-typo-teal outline-none" />
-            <div className="grid grid-cols-2 gap-4">
-               <input type="number" value={invQuantity} onChange={(e) => setInvQuantity(e.target.value)} placeholder="Qty" className="bg-black/20 border border-white/10 rounded-xl p-3 text-white" />
-               <input type="number" value={invCost} onChange={(e) => setInvCost(e.target.value)} placeholder="Unit Cost" className="bg-black/20 border border-white/10 rounded-xl p-3 text-white" />
+      <Modal isOpen={isInventoryModalOpen} onClose={() => setIsInventoryModalOpen(false)} title="Add New Product">
+         <div className="space-y-5">
+            <div>
+                <label className="block text-[10px] uppercase font-bold text-gray-500 mb-1 tracking-wider">Product Name</label>
+                <input type="text" autoFocus value={invName} onChange={(e) => setInvName(e.target.value)} placeholder="e.g. Neon Glitch Tee" className="w-full bg-black/20 border border-white/10 rounded-xl p-3 text-white focus:border-typo-teal outline-none font-medium placeholder-gray-600" />
             </div>
-            <div className="flex flex-wrap gap-2">
+            
+            <div className="grid grid-cols-2 gap-4">
+               <div>
+                 <label className="block text-[10px] uppercase font-bold text-gray-500 mb-1 tracking-wider">Size</label>
+                 <input type="text" value={invSize} onChange={(e) => setInvSize(e.target.value)} placeholder="L" className="w-full bg-black/20 border border-white/10 rounded-xl p-3 text-white focus:border-typo-teal outline-none placeholder-gray-600" />
+               </div>
+               <div>
+                 <label className="block text-[10px] uppercase font-bold text-gray-500 mb-1 tracking-wider">Color</label>
+                 <input type="text" value={invColor} onChange={(e) => setInvColor(e.target.value)} placeholder="e.g. Black" className="w-full bg-black/20 border border-white/10 rounded-xl p-3 text-white focus:border-typo-teal outline-none placeholder-gray-600" />
+               </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+               <div>
+                  <label className="block text-[10px] uppercase font-bold text-gray-500 mb-1 tracking-wider">Cost (MMK)</label>
+                  <input type="number" value={invCost} onChange={(e) => setInvCost(e.target.value)} placeholder="0" className="w-full bg-black/20 border border-white/10 rounded-xl p-3 text-white focus:border-typo-teal outline-none font-mono" />
+               </div>
+               <div>
+                  <label className="block text-[10px] uppercase font-bold text-gray-500 mb-1 tracking-wider">Price (MMK)</label>
+                  <input type="number" value={invPrice} onChange={(e) => setInvPrice(e.target.value)} placeholder="0" className="w-full bg-black/20 border border-white/10 rounded-xl p-3 text-white focus:border-typo-teal outline-none font-mono" />
+               </div>
+            </div>
+
+            {/* Micro-calc: Margin Display */}
+            {invCost && invPrice && (
+                <div className="bg-white/5 rounded-lg p-3 flex items-center justify-between border border-white/5">
+                    <span className="text-xs text-gray-400">Estimated Profit/Unit</span>
+                    <div className="text-right">
+                        <span className="block font-bold text-typo-accent">{formatMMK(parseFloat(invPrice) - parseFloat(invCost))}</span>
+                        <span className="text-[10px] text-gray-500">
+                             {(((parseFloat(invPrice) - parseFloat(invCost)) / parseFloat(invPrice)) * 100).toFixed(1)}% Margin
+                        </span>
+                    </div>
+                </div>
+            )}
+
+            <div>
+                <label className="block text-[10px] uppercase font-bold text-gray-500 mb-1 tracking-wider">Initial Stock</label>
+                <input type="number" value={invQuantity} onChange={(e) => setInvQuantity(e.target.value)} placeholder="0" className="w-full bg-black/20 border border-white/10 rounded-xl p-3 text-white focus:border-typo-teal outline-none font-bold text-lg" />
+            </div>
+
+            <div className="flex flex-wrap gap-2 pt-2">
                {INVENTORY_CATEGORIES.map(cat => (
-                  <button key={cat} onClick={() => setInvCategory(cat)} className={`px-3 py-2 rounded-lg text-xs font-bold ${invCategory === cat ? 'bg-typo-teal text-white' : 'bg-white/5 text-gray-400'}`}>{cat}</button>
+                  <button key={cat} onClick={() => setInvCategory(cat)} className={`px-3 py-1.5 rounded-lg text-[10px] uppercase font-bold tracking-wider ${invCategory === cat ? 'bg-typo-teal text-white' : 'bg-white/5 text-gray-500'}`}>{cat}</button>
                ))}
             </div>
-            <label className="flex items-center gap-3 p-3 bg-white/5 rounded-xl cursor-pointer">
+
+            <label className="flex items-center gap-3 p-3 bg-white/5 rounded-xl cursor-pointer hover:bg-white/10 transition-colors">
                <input type="checkbox" checked={logAsExpense} onChange={(e) => setLogAsExpense(e.target.checked)} className="rounded text-typo-teal focus:ring-0 bg-black/20 border-white/10" />
-               <span className="text-sm text-gray-300">Log cost as expense?</span>
+               <div>
+                   <span className="text-sm font-bold text-white block">Log as Expense?</span>
+                   <span className="text-xs text-gray-500 block">Automatically add total cost to ledger</span>
+               </div>
             </label>
-            <Button onClick={handleAddInventory} className="w-full py-3">Add to Stock</Button>
+
+            <Button onClick={handleAddInventory} className="w-full py-4 text-base bg-typo-accent text-typo-dark hover:bg-white">Save to Inventory</Button>
+         </div>
+      </Modal>
+
+      {/* Quick Sell Modal */}
+      <Modal isOpen={isQuickSellOpen} onClose={() => setIsQuickSellOpen(false)} title="Quick Sale">
+         <div className="space-y-6">
+            <div className="bg-white/5 p-4 rounded-xl flex items-center gap-4">
+                 <div className="w-12 h-12 bg-typo-teal/20 rounded-lg flex items-center justify-center text-typo-accent">
+                     <Shirt size={24} />
+                 </div>
+                 <div>
+                     <h4 className="font-bold text-white text-lg">{selectedItemForSale?.name}</h4>
+                     <p className="text-gray-400 text-sm">{selectedItemForSale?.size} • {selectedItemForSale?.color}</p>
+                 </div>
+            </div>
+
+            <div>
+                <label className="block text-[10px] uppercase font-bold text-gray-500 mb-1 tracking-wider">Quantity to Sell</label>
+                <div className="flex items-center gap-4">
+                     <input 
+                        type="number" 
+                        value={saleQuantity} 
+                        onChange={(e) => setSaleQuantity(e.target.value)}
+                        className="flex-1 bg-black/20 border border-white/10 rounded-xl p-4 text-2xl font-bold text-white text-center focus:border-typo-teal outline-none"
+                        autoFocus
+                     />
+                     <div className="text-right">
+                         <span className="block text-gray-500 text-xs uppercase font-bold">Total</span>
+                         <span className="block text-typo-accent font-bold text-xl">
+                            {formatMMK((parseInt(saleQuantity) || 0) * (selectedItemForSale?.unitPrice || 0))}
+                         </span>
+                     </div>
+                </div>
+            </div>
+
+            <Button onClick={executeQuickSell} variant="success" className="w-full py-4 text-lg">
+                Confirm Sale
+            </Button>
          </div>
       </Modal>
 
