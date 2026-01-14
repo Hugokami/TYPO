@@ -1,0 +1,5 @@
+{
+  "name": "TYPO Business Manager",
+  "description": "A financial management dashboard for TYPO Apparel, featuring MMK currency tracking, inventory logging, and data portability.",
+  "requestFramePermissions": []
+}
