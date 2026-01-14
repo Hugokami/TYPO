@@ -19,7 +19,14 @@ import {
   AlertTriangle,
   RefreshCw,
   Box,
-  Tags
+  Tags,
+  Users,
+  Edit2,
+  Phone,
+  MapPin,
+  FileText,
+  PieChart as PieChartIcon,
+  RotateCcw
 } from 'lucide-react';
 import { 
   AreaChart, 
@@ -28,9 +35,13 @@ import {
   YAxis, 
   CartesianGrid, 
   Tooltip, 
-  ResponsiveContainer 
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+  Legend
 } from 'recharts';
-import { Transaction, FinancialState, CATEGORIES, TransactionType, InventoryItem, INVENTORY_CATEGORIES, InventoryCategory } from './types';
+import { Transaction, FinancialState, CATEGORIES, TransactionType, InventoryItem, INVENTORY_CATEGORIES, InventoryCategory, Customer } from './types';
 
 // --- Utility Functions ---
 
@@ -43,6 +54,8 @@ const formatMMK = (amount: number) => {
 };
 
 const generateId = () => Math.random().toString(36).substr(2, 9);
+
+const COLORS = ['#0E5E5E', '#4ECDC4', '#C4ECE8', '#FF6B6B', '#FFD93D', '#6A0572', '#AB83A1'];
 
 // --- Components ---
 
@@ -90,12 +103,14 @@ const Modal = ({ isOpen, onClose, title, children }: { isOpen: boolean, onClose:
 // --- Main App ---
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'ledger' | 'inventory' | 'settings'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'ledger' | 'inventory' | 'customers' | 'settings'>('dashboard');
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
+  const [customers, setCustomers] = useState<Customer[]>([]);
   
   // Transaction Form State
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [editingTxId, setEditingTxId] = useState<string | null>(null);
   const [newTxType, setNewTxType] = useState<TransactionType>('income');
   const [amount, setAmount] = useState('');
   const [description, setDescription] = useState('');
@@ -109,6 +124,15 @@ export default function App() {
   const [invCost, setInvCost] = useState('');
   const [invReorder, setInvReorder] = useState('10');
   const [logAsExpense, setLogAsExpense] = useState(false);
+
+  // Customer Form State
+  const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false);
+  const [custName, setCustName] = useState('');
+  const [custPhone, setCustPhone] = useState('');
+  const [custEmail, setCustEmail] = useState('');
+  const [custAddress, setCustAddress] = useState('');
+  const [custNotes, setCustNotes] = useState('');
+  const [editingCustId, setEditingCustId] = useState<string | null>(null);
 
   // Search State
   const [searchTerm, setSearchTerm] = useState('');
@@ -153,24 +177,71 @@ export default function App() {
     return data.slice(-10);
   }, [transactions]);
 
+  const pieData = useMemo(() => {
+    const expenseCategories: Record<string, number> = {};
+    transactions.filter(t => t.type === 'expense').forEach(t => {
+      expenseCategories[t.category] = (expenseCategories[t.category] || 0) + t.amount;
+    });
+    return Object.keys(expenseCategories).map(key => ({
+      name: key,
+      value: expenseCategories[key]
+    }));
+  }, [transactions]);
+
   // --- Handlers ---
 
-  const handleAddTransaction = () => {
-    if (!amount || !description || !category) return;
-    
-    const newTx: Transaction = {
-      id: generateId(),
-      date: new Date().toISOString(),
-      amount: parseFloat(amount),
-      description,
-      type: newTxType,
-      category
-    };
-
-    setTransactions(prev => [newTx, ...prev]);
+  const openAddTxModal = (type: TransactionType) => {
+    setNewTxType(type);
+    setEditingTxId(null);
     setAmount('');
     setDescription('');
     setCategory('');
+    setIsAddModalOpen(true);
+  };
+
+  const openEditTxModal = (tx: Transaction) => {
+    setNewTxType(tx.type);
+    setEditingTxId(tx.id);
+    setAmount(tx.amount.toString());
+    setDescription(tx.description);
+    setCategory(tx.category);
+    setIsAddModalOpen(true);
+  };
+
+  const handleSaveTransaction = () => {
+    if (!amount || !description || !category) return;
+    
+    if (editingTxId) {
+      // Edit Mode
+      setTransactions(prev => prev.map(t => {
+        if (t.id === editingTxId) {
+           return {
+             ...t,
+             amount: parseFloat(amount),
+             description,
+             category,
+             type: newTxType
+           }
+        }
+        return t;
+      }));
+    } else {
+      // Add Mode
+      const newTx: Transaction = {
+        id: generateId(),
+        date: new Date().toISOString(),
+        amount: parseFloat(amount),
+        description,
+        type: newTxType,
+        category
+      };
+      setTransactions(prev => [newTx, ...prev]);
+    }
+
+    setAmount('');
+    setDescription('');
+    setCategory('');
+    setEditingTxId(null);
     setIsAddModalOpen(false);
   };
 
@@ -192,7 +263,6 @@ export default function App() {
 
     setInventory(prev => [newItem, ...prev]);
 
-    // Optional: Log as expense
     if (logAsExpense) {
       const totalCost = qty * cost;
       const expenseTx: Transaction = {
@@ -206,13 +276,64 @@ export default function App() {
       setTransactions(prev => [expenseTx, ...prev]);
     }
 
-    // Reset
     setInvName('');
     setInvCategory('Raw Material');
     setInvQuantity('');
     setInvCost('');
     setLogAsExpense(false);
     setIsInventoryModalOpen(false);
+  };
+
+  const openCustomerModal = (customer?: Customer) => {
+    if (customer) {
+      setEditingCustId(customer.id);
+      setCustName(customer.name);
+      setCustPhone(customer.phone);
+      setCustEmail(customer.email);
+      setCustAddress(customer.address);
+      setCustNotes(customer.notes);
+    } else {
+      setEditingCustId(null);
+      setCustName('');
+      setCustPhone('');
+      setCustEmail('');
+      setCustAddress('');
+      setCustNotes('');
+    }
+    setIsCustomerModalOpen(true);
+  };
+
+  const handleSaveCustomer = () => {
+    if (!custName) return;
+
+    if (editingCustId) {
+      setCustomers(prev => prev.map(c => c.id === editingCustId ? {
+        ...c,
+        name: custName,
+        phone: custPhone,
+        email: custEmail,
+        address: custAddress,
+        notes: custNotes
+      } : c));
+    } else {
+      const newCustomer: Customer = {
+        id: generateId(),
+        name: custName,
+        phone: custPhone,
+        email: custEmail,
+        address: custAddress,
+        notes: custNotes,
+        totalSpent: 0
+      };
+      setCustomers(prev => [...prev, newCustomer]);
+    }
+    setIsCustomerModalOpen(false);
+  };
+
+  const handleDeleteCustomer = (id: string) => {
+    if (window.confirm('Delete this customer?')) {
+      setCustomers(prev => prev.filter(c => c.id !== id));
+    }
   };
 
   const handleAdjustStock = (id: string, adjustment: number) => {
@@ -237,14 +358,26 @@ export default function App() {
     }
   };
 
+  const handleResetData = () => {
+    if (window.confirm("WARNING: This will delete ALL transactions, inventory, and customers. This cannot be undone.")) {
+       if (window.confirm("Are you absolutely sure?")) {
+         setTransactions([]);
+         setInventory([]);
+         setCustomers([]);
+         alert("All data has been reset to 0.");
+       }
+    }
+  };
+
   // --- Data Management ---
 
   const handleExport = () => {
     const exportData = {
       transactions,
       inventory,
+      customers,
       exportedAt: new Date().toISOString(),
-      version: "1.1"
+      version: "1.2"
     };
     const dataStr = JSON.stringify(exportData, null, 2);
     const blob = new Blob([dataStr], { type: "application/json" });
@@ -269,13 +402,13 @@ export default function App() {
         const result = e.target?.result as string;
         const data = JSON.parse(result);
         
-        // Handle Legacy (Array) or New (Object) format
         if (Array.isArray(data)) {
           setTransactions(data);
           alert('Legacy transactions imported successfully!');
-        } else if (data.transactions || data.inventory) {
+        } else if (data.transactions || data.inventory || data.customers) {
           if (data.transactions) setTransactions(data.transactions);
           if (data.inventory) setInventory(data.inventory);
+          if (data.customers) setCustomers(data.customers);
           alert('Full system backup imported successfully!');
         } else {
           alert('Invalid file format.');
@@ -320,13 +453,13 @@ export default function App() {
 
           <div className="mt-8 flex gap-3">
              <button 
-               onClick={() => { setNewTxType('income'); setIsAddModalOpen(true); }}
+               onClick={() => openAddTxModal('income')}
                className="flex-1 bg-typo-accent text-typo-teal py-3 px-4 rounded-xl font-display font-bold text-sm hover:bg-white transition-colors flex items-center justify-center gap-2 shadow-lg"
              >
                <Plus className="w-4 h-4" /> Add Income
              </button>
              <button 
-                onClick={() => { setNewTxType('expense'); setIsAddModalOpen(true); }}
+                onClick={() => openAddTxModal('expense')}
                 className="flex-1 bg-black/20 text-white py-3 px-4 rounded-xl font-display font-bold text-sm hover:bg-black/30 transition-colors backdrop-blur-sm flex items-center justify-center gap-2 border border-white/10"
              >
                <ArrowUpRight className="w-4 h-4" /> Expense
@@ -357,6 +490,42 @@ export default function App() {
           <p className="text-xl font-display font-bold text-typo-dark dark:text-white tabular-nums">{formatMMK(financials.totalExpense)}</p>
         </Card>
       </div>
+
+       {/* Pie Chart */}
+       {pieData.length > 0 && (
+        <Card className="!p-0 overflow-hidden bg-white dark:bg-typo-teal flex flex-col">
+          <div className="p-6 pb-2">
+             <h3 className="font-display font-bold text-lg text-typo-dark dark:text-white flex items-center gap-2">
+                <PieChartIcon className="w-5 h-5 text-typo-teal dark:text-typo-accent" />
+                Expense Breakdown
+             </h3>
+          </div>
+          <div className="w-full h-64">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={pieData}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={60}
+                  outerRadius={80}
+                  paddingAngle={5}
+                  dataKey="value"
+                >
+                  {pieData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip 
+                   formatter={(value: number) => formatMMK(value)}
+                   contentStyle={{ backgroundColor: '#051F1F', border: 'none', borderRadius: '8px', color: '#fff' }}
+                />
+                <Legend />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+        </Card>
+      )}
 
       {/* Quick Actions */}
       <div className="flex gap-4 overflow-x-auto pb-2 -mx-4 px-4 custom-scrollbar">
@@ -390,7 +559,7 @@ export default function App() {
           
           <div className="space-y-3">
             {transactions.slice(0, 5).map((tx) => (
-              <div key={tx.id} className="flex items-center justify-between bg-white dark:bg-typo-light/30 p-4 rounded-xl shadow-sm border border-gray-100 dark:border-white/5">
+              <div onClick={() => openEditTxModal(tx)} key={tx.id} className="flex items-center justify-between bg-white dark:bg-typo-light/30 p-4 rounded-xl shadow-sm border border-gray-100 dark:border-white/5 active:scale-95 transition-transform cursor-pointer">
                 <div className="flex items-center gap-4">
                   <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
                     tx.type === 'income' 
@@ -580,7 +749,10 @@ export default function App() {
                   }`}>
                     {tx.type === 'expense' && '-'} {formatMMK(tx.amount)}
                   </td>
-                  <td className="p-4 text-center">
+                  <td className="p-4 text-center flex items-center justify-center gap-2">
+                     <button onClick={() => openEditTxModal(tx)} className="text-gray-300 hover:text-typo-teal dark:hover:text-typo-accent transition-colors">
+                        <Edit2 className="w-4 h-4" />
+                     </button>
                      <button onClick={() => handleDeleteTransaction(tx.id)} className="text-gray-300 hover:text-red-500 transition-colors">
                        <Trash2 className="w-4 h-4" />
                      </button>
@@ -593,6 +765,71 @@ export default function App() {
              <div className="p-8 text-center text-gray-400 text-sm">No records found.</div>
           )}
         </div>
+      </div>
+    </div>
+  );
+
+  const CustomersView = () => (
+    <div className="space-y-6 pb-24 animate-in slide-in-from-right duration-300">
+       <div className="sticky top-0 bg-[#F0F7F7] dark:bg-[#051F1F] z-20 pb-4 pt-2 flex justify-between items-end">
+        <div>
+           <h2 className="font-display font-bold text-3xl text-typo-dark dark:text-white pl-2">CUSTOMERS</h2>
+           <p className="text-xs text-gray-500 pl-2">CRM & Address Book</p>
+        </div>
+        <Button onClick={() => openCustomerModal()} className="!py-2 !px-4 text-xs">
+          <Plus className="w-4 h-4" /> Add
+        </Button>
+      </div>
+
+      <div className="grid gap-4">
+         {customers.map(c => (
+            <div key={c.id} className="bg-white dark:bg-typo-light p-5 rounded-2xl shadow-sm border border-gray-100 dark:border-white/5 relative group">
+               <div className="absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <button onClick={() => openCustomerModal(c)} className="p-1.5 rounded-full bg-gray-100 dark:bg-white/10 text-gray-500 hover:text-typo-teal">
+                     <Edit2 size={14} />
+                  </button>
+                  <button onClick={() => handleDeleteCustomer(c.id)} className="p-1.5 rounded-full bg-gray-100 dark:bg-white/10 text-gray-500 hover:text-red-500">
+                     <Trash2 size={14} />
+                  </button>
+               </div>
+               
+               <div className="flex items-start gap-4">
+                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-typo-teal to-typo-light flex items-center justify-center text-white font-display font-bold text-xl">
+                     {c.name.charAt(0)}
+                  </div>
+                  <div className="flex-1">
+                     <h3 className="font-bold text-lg text-typo-dark dark:text-white">{c.name}</h3>
+                     
+                     <div className="mt-2 space-y-1">
+                        {c.phone && (
+                           <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
+                              <Phone size={14} />
+                              <span>{c.phone}</span>
+                           </div>
+                        )}
+                        {c.address && (
+                           <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
+                              <MapPin size={14} />
+                              <span className="truncate max-w-[200px]">{c.address}</span>
+                           </div>
+                        )}
+                         {c.notes && (
+                           <div className="flex items-start gap-2 text-sm text-gray-500 dark:text-gray-400 mt-2 bg-gray-50 dark:bg-black/20 p-2 rounded-lg">
+                              <FileText size={14} className="mt-0.5" />
+                              <span className="text-xs italic">{c.notes}</span>
+                           </div>
+                        )}
+                     </div>
+                  </div>
+               </div>
+            </div>
+         ))}
+         {customers.length === 0 && (
+          <div className="text-center py-10 opacity-50">
+             <Users className="w-12 h-12 mx-auto mb-2 text-gray-300" />
+             <p className="text-sm">No customers added yet</p>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -617,7 +854,7 @@ export default function App() {
                   </div>
                   <div className="text-left">
                     <div className="font-bold text-white">Export Full Backup</div>
-                    <div className="text-xs text-white/50">Save transactions & inventory</div>
+                    <div className="text-xs text-white/50">Save transactions, stock & CRM</div>
                   </div>
                 </div>
                 <div className="text-typo-accent opacity-0 group-hover:opacity-100 transition-opacity">
@@ -652,8 +889,23 @@ export default function App() {
           </div>
        </Card>
 
+       <Card className="!p-0 overflow-hidden border-red-200 bg-red-50 dark:bg-red-900/10">
+          <div className="p-6">
+            <h3 className="font-display font-bold text-xl mb-1 text-red-600 dark:text-red-400">Danger Zone</h3>
+            <p className="text-sm text-red-600/60 dark:text-red-400/60 mb-4">Irreversible actions.</p>
+            
+            <button 
+               onClick={handleResetData}
+               className="w-full bg-red-100 hover:bg-red-200 text-red-600 dark:bg-red-900/20 dark:hover:bg-red-900/30 dark:text-red-400 p-4 rounded-xl flex items-center justify-center gap-2 font-bold transition-all"
+            >
+               <RotateCcw className="w-4 h-4" />
+               Reset All Data to 0
+            </button>
+          </div>
+       </Card>
+
        <div className="p-4 text-center text-xs text-gray-400">
-          <p>TYPO Business Manager v1.2</p>
+          <p>TYPO Business Manager v1.3</p>
           <p className="mt-1">Local Storage Mode • Data resides on this device</p>
        </div>
     </div>
@@ -668,7 +920,7 @@ export default function App() {
           <MoreHorizontal className="w-5 h-5" />
         </div>
         <span className="font-display font-bold text-lg tracking-widest text-typo-teal dark:text-typo-accent">
-          {activeTab === 'dashboard' ? 'DASHBOARD' : activeTab === 'ledger' ? 'LEDGER' : activeTab === 'inventory' ? 'STOCK' : 'SYSTEM'}
+          {activeTab === 'dashboard' ? 'DASHBOARD' : activeTab === 'ledger' ? 'LEDGER' : activeTab === 'inventory' ? 'STOCK' : activeTab === 'customers' ? 'CRM' : 'SYSTEM'}
         </span>
         <div className="relative">
           <div className="w-9 h-9 bg-typo-teal rounded-full flex items-center justify-center text-typo-accent border-2 border-typo-accent shadow-lg">
@@ -683,6 +935,7 @@ export default function App() {
         {activeTab === 'dashboard' && <DashboardView />}
         {activeTab === 'ledger' && <LedgerView />}
         {activeTab === 'inventory' && <InventoryView />}
+        {activeTab === 'customers' && <CustomersView />}
         {activeTab === 'settings' && <SettingsView />}
       </main>
 
@@ -704,7 +957,7 @@ export default function App() {
           </button>
 
           <button 
-            onClick={() => { setNewTxType('income'); setIsAddModalOpen(true); }}
+            onClick={() => openAddTxModal('income')}
             className="bg-typo-accent text-typo-teal px-6 py-3 rounded-full font-bold font-display flex items-center gap-2 hover:bg-white transition-colors mx-2 shadow-lg active:scale-95"
           >
             <Plus className="w-5 h-5" />
@@ -719,6 +972,13 @@ export default function App() {
           </button>
 
           <button 
+            onClick={() => setActiveTab('customers')} 
+            className={`p-3 rounded-full transition-all duration-300 ${activeTab === 'customers' ? 'bg-white/20 text-typo-accent' : 'hover:bg-white/10 text-white/50'}`}
+          >
+            <Users className="w-6 h-6" />
+          </button>
+
+          <button 
             onClick={() => setActiveTab('settings')}
             className={`p-3 rounded-full transition-all duration-300 ${activeTab === 'settings' ? 'bg-white/20 text-typo-accent' : 'hover:bg-white/10 text-white/50'}`}
           >
@@ -727,11 +987,11 @@ export default function App() {
         </div>
       </div>
 
-      {/* Add Transaction Modal */}
+      {/* Add/Edit Transaction Modal */}
       <Modal
         isOpen={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}
-        title={`Add ${newTxType}`}
+        title={`${editingTxId ? 'Edit' : 'Add'} ${newTxType}`}
       >
         <div className="space-y-4">
           <div>
@@ -784,11 +1044,11 @@ export default function App() {
                CANCEL
              </button>
              <button 
-                onClick={handleAddTransaction}
+                onClick={handleSaveTransaction}
                 disabled={!amount || !description || !category}
                 className="flex-[2] bg-typo-teal text-white rounded-xl py-3 font-display font-bold tracking-wide shadow-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-typo-light transition-colors"
              >
-               SAVE TRANSACTION
+               {editingTxId ? 'UPDATE' : 'SAVE'}
              </button>
           </div>
         </div>
@@ -895,6 +1155,87 @@ export default function App() {
              </button>
           </div>
         </div>
+      </Modal>
+
+      {/* Customer Modal */}
+      <Modal
+         isOpen={isCustomerModalOpen}
+         onClose={() => setIsCustomerModalOpen(false)}
+         title={`${editingCustId ? 'Edit' : 'Add'} Customer`}
+      >
+         <div className="space-y-4">
+            <div>
+               <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-1">Name</label>
+               <input 
+                  type="text" 
+                  autoFocus
+                  value={custName}
+                  onChange={(e) => setCustName(e.target.value)}
+                  className="w-full bg-white dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl p-3 font-medium text-typo-dark dark:text-white focus:ring-2 focus:ring-typo-teal/50 outline-none"
+                  placeholder="Customer Name"
+               />
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4">
+               <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-1">Phone</label>
+                  <input 
+                     type="text" 
+                     value={custPhone}
+                     onChange={(e) => setCustPhone(e.target.value)}
+                     className="w-full bg-white dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl p-3 text-sm text-typo-dark dark:text-white focus:ring-2 focus:ring-typo-teal/50 outline-none"
+                     placeholder="09..."
+                  />
+               </div>
+               <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-1">Email</label>
+                  <input 
+                     type="email" 
+                     value={custEmail}
+                     onChange={(e) => setCustEmail(e.target.value)}
+                     className="w-full bg-white dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl p-3 text-sm text-typo-dark dark:text-white focus:ring-2 focus:ring-typo-teal/50 outline-none"
+                     placeholder="Optional"
+                  />
+               </div>
+            </div>
+
+            <div>
+               <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-1">Address</label>
+               <textarea 
+                  value={custAddress}
+                  onChange={(e) => setCustAddress(e.target.value)}
+                  className="w-full bg-white dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl p-3 text-sm text-typo-dark dark:text-white focus:ring-2 focus:ring-typo-teal/50 outline-none h-20 resize-none"
+                  placeholder="Delivery Address..."
+               />
+            </div>
+
+            <div>
+               <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-1">Notes</label>
+               <input 
+                  type="text" 
+                  value={custNotes}
+                  onChange={(e) => setCustNotes(e.target.value)}
+                  className="w-full bg-white dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl p-3 text-sm text-typo-dark dark:text-white focus:ring-2 focus:ring-typo-teal/50 outline-none"
+                  placeholder="Sizes, preferences, etc."
+               />
+            </div>
+
+            <div className="pt-4 flex gap-3">
+               <button 
+                  onClick={() => setIsCustomerModalOpen(false)}
+                  className="flex-1 py-3 text-gray-500 font-bold text-sm hover:text-gray-700 dark:hover:text-white"
+               >
+                  CANCEL
+               </button>
+               <button 
+                  onClick={handleSaveCustomer}
+                  disabled={!custName}
+                  className="flex-[2] bg-typo-teal text-white rounded-xl py-3 font-display font-bold tracking-wide shadow-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-typo-light transition-colors"
+               >
+                  {editingCustId ? 'UPDATE' : 'SAVE CUSTOMER'}
+               </button>
+            </div>
+         </div>
       </Modal>
 
     </div>

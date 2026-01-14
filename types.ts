@@ -9,6 +9,16 @@ export interface Transaction {
   category: string;
 }
 
+export interface Customer {
+  id: string;
+  name: string;
+  phone: string;
+  email: string;
+  address: string;
+  notes: string;
+  totalSpent: number; // Calculated field
+}
+
 export type InventoryCategory = 'Raw Material' | 'Finished Product' | 'Packaging' | 'Asset';
 
 export interface InventoryItem {
