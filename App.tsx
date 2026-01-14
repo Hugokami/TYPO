@@ -4,12 +4,9 @@ import {
   Minus,
   ArrowDownLeft, 
   ArrowUpRight, 
-  Wallet, 
   Download, 
   Upload, 
   Search, 
-  Filter, 
-  MoreHorizontal,
   LayoutDashboard,
   Table2,
   Settings,
@@ -17,9 +14,7 @@ import {
   TrendingUp,
   Package,
   AlertTriangle,
-  RefreshCw,
   Box,
-  Tags,
   Users,
   Edit2,
   Phone,
@@ -27,10 +22,16 @@ import {
   FileText,
   PieChart as PieChartIcon,
   RotateCcw,
-  Menu,
   X,
   UserCircle,
-  Briefcase
+  Sparkles,
+  ArrowRight,
+  Shirt,
+  DollarSign,
+  BrainCircuit,
+  TrendingDown,
+  Activity,
+  Lightbulb
 } from 'lucide-react';
 import { 
   AreaChart, 
@@ -43,7 +44,9 @@ import {
   PieChart,
   Pie,
   Cell,
-  Legend
+  Legend,
+  BarChart,
+  Bar
 } from 'recharts';
 import { Transaction, FinancialState, CATEGORIES, TransactionType, InventoryItem, INVENTORY_CATEGORIES, InventoryCategory, Customer } from './types';
 
@@ -54,7 +57,7 @@ const formatMMK = (amount: number) => {
     style: 'decimal',
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
-  }).format(amount);
+  }).format(amount) + ' MMK';
 };
 
 const generateId = () => Math.random().toString(36).substr(2, 9);
@@ -63,13 +66,14 @@ const COLORS = ['#0E5E5E', '#4ECDC4', '#C4ECE8', '#FF6B6B', '#FFD93D', '#6A0572'
 
 // --- Components ---
 
-const Button = ({ children, onClick, variant = 'primary', className = '' }: { children?: React.ReactNode, onClick?: () => void, variant?: 'primary' | 'secondary' | 'ghost' | 'danger', className?: string }) => {
-  const baseStyle = "font-display font-bold tracking-wide rounded-2xl px-6 py-3 transition-all active:scale-95 flex items-center justify-center gap-2";
+const Button = ({ children, onClick, variant = 'primary', className = '' }: { children?: React.ReactNode, onClick?: () => void, variant?: 'primary' | 'secondary' | 'ghost' | 'danger' | 'success', className?: string }) => {
+  const baseStyle = "font-display font-bold tracking-wide rounded-xl px-4 py-2.5 transition-all active:scale-95 flex items-center justify-center gap-2 text-sm";
   const variants = {
-    primary: "bg-typo-accent text-typo-teal hover:bg-white shadow-lg",
+    primary: "bg-typo-accent text-typo-teal hover:bg-white hover:shadow-lg hover:shadow-typo-accent/20",
     secondary: "bg-typo-teal text-white border border-white/10 hover:bg-typo-light",
-    ghost: "bg-transparent text-typo-teal dark:text-typo-accent hover:bg-black/5 dark:hover:bg-white/5",
-    danger: "bg-red-500/10 text-red-500 hover:bg-red-500/20"
+    ghost: "bg-transparent text-gray-400 hover:text-white hover:bg-white/5",
+    danger: "bg-red-500/10 text-red-500 hover:bg-red-500/20",
+    success: "bg-green-500/10 text-green-500 hover:bg-green-500/20"
   };
 
   return (
@@ -80,7 +84,7 @@ const Button = ({ children, onClick, variant = 'primary', className = '' }: { ch
 };
 
 const Card = ({ children, className = '' }: { children?: React.ReactNode, className?: string }) => (
-  <div className={`bg-white dark:bg-typo-teal rounded-[2rem] p-6 shadow-xl border border-gray-100 dark:border-white/5 ${className}`}>
+  <div className={`bg-[#0E2A2A] rounded-2xl p-6 border border-white/5 ${className}`}>
     {children}
   </div>
 );
@@ -88,12 +92,12 @@ const Card = ({ children, className = '' }: { children?: React.ReactNode, classN
 const Modal = ({ isOpen, onClose, title, children }: { isOpen: boolean, onClose: () => void, title: string, children?: React.ReactNode }) => {
   if (!isOpen) return null;
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
-      <div className="bg-[#F0F7F7] dark:bg-[#051F1F] rounded-3xl w-full max-w-md overflow-hidden shadow-2xl border border-typo-teal/30 max-h-[90vh] overflow-y-auto custom-scrollbar">
-        <div className="p-6 border-b border-typo-teal/10 flex justify-between items-center bg-typo-teal text-white sticky top-0 z-10">
-          <h3 className="font-display font-bold text-xl tracking-wider uppercase">{title}</h3>
-          <button onClick={onClose} className="p-1 hover:bg-white/10 rounded-full transition-colors">
-            <Plus className="rotate-45 w-6 h-6" />
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
+      <div className="bg-[#051F1F] rounded-2xl w-full max-w-md overflow-hidden shadow-2xl border border-white/10 max-h-[90vh] overflow-y-auto custom-scrollbar">
+        <div className="p-6 border-b border-white/10 flex justify-between items-center bg-[#021212]">
+          <h3 className="font-display font-bold text-xl tracking-wider uppercase text-white">{title}</h3>
+          <button onClick={onClose} className="p-1 hover:bg-white/10 rounded-full transition-colors text-white">
+            <X className="w-5 h-5" />
           </button>
         </div>
         <div className="p-6">
@@ -107,7 +111,7 @@ const Modal = ({ isOpen, onClose, title, children }: { isOpen: boolean, onClose:
 // --- Main App ---
 
 export default function App() {
-  // --- Persistent State Initialization ---
+  // --- Persistent State ---
   const [transactions, setTransactions] = useState<Transaction[]>(() => {
     const saved = localStorage.getItem('typo_transactions');
     return saved ? JSON.parse(saved) : [];
@@ -125,34 +129,21 @@ export default function App() {
 
   const [businessProfile, setBusinessProfile] = useState(() => {
     const saved = localStorage.getItem('typo_profile');
-    return saved ? JSON.parse(saved) : { name: 'TYPO', subtitle: 'Apparel Co.' };
+    return saved ? JSON.parse(saved) : { name: 'TYPO', subtitle: 'Apparel Co.', owner: 'John Manager' };
   });
 
   // --- Persistence Effects ---
-  useEffect(() => {
-    localStorage.setItem('typo_transactions', JSON.stringify(transactions));
-  }, [transactions]);
+  useEffect(() => localStorage.setItem('typo_transactions', JSON.stringify(transactions)), [transactions]);
+  useEffect(() => localStorage.setItem('typo_inventory', JSON.stringify(inventory)), [inventory]);
+  useEffect(() => localStorage.setItem('typo_customers', JSON.stringify(customers)), [customers]);
+  useEffect(() => localStorage.setItem('typo_profile', JSON.stringify(businessProfile)), [businessProfile]);
 
-  useEffect(() => {
-    localStorage.setItem('typo_inventory', JSON.stringify(inventory));
-  }, [inventory]);
-
-  useEffect(() => {
-    localStorage.setItem('typo_customers', JSON.stringify(customers));
-  }, [customers]);
-
-  useEffect(() => {
-    localStorage.setItem('typo_profile', JSON.stringify(businessProfile));
-  }, [businessProfile]);
-
-
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'ledger' | 'inventory' | 'customers' | 'settings'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'ledger' | 'inventory' | 'consultant' | 'settings'>('dashboard');
   
   // UI States
-  const [showMenu, setShowMenu] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
 
-  // Transaction Form State
+  // Forms
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editingTxId, setEditingTxId] = useState<string | null>(null);
   const [newTxType, setNewTxType] = useState<TransactionType>('income');
@@ -160,7 +151,6 @@ export default function App() {
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState('');
   
-  // Inventory Form State
   const [isInventoryModalOpen, setIsInventoryModalOpen] = useState(false);
   const [invName, setInvName] = useState('');
   const [invCategory, setInvCategory] = useState<InventoryCategory>('Raw Material');
@@ -169,7 +159,6 @@ export default function App() {
   const [invReorder, setInvReorder] = useState('10');
   const [logAsExpense, setLogAsExpense] = useState(false);
 
-  // Customer Form State
   const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false);
   const [custName, setCustName] = useState('');
   const [custPhone, setCustPhone] = useState('');
@@ -178,28 +167,17 @@ export default function App() {
   const [custNotes, setCustNotes] = useState('');
   const [editingCustId, setEditingCustId] = useState<string | null>(null);
 
-  // Profile Form State
   const [profName, setProfName] = useState(businessProfile.name);
   const [profSubtitle, setProfSubtitle] = useState(businessProfile.subtitle);
+  const [profOwner, setProfOwner] = useState(businessProfile.owner);
 
-  // Search State
   const [searchTerm, setSearchTerm] = useState('');
 
   // Derived State
   const financials: FinancialState = useMemo(() => {
-    const totalIncome = transactions
-      .filter(t => t.type === 'income')
-      .reduce((acc, curr) => acc + curr.amount, 0);
-    const totalExpense = transactions
-      .filter(t => t.type === 'expense')
-      .reduce((acc, curr) => acc + curr.amount, 0);
-    
-    return {
-      transactions,
-      balance: totalIncome - totalExpense,
-      totalIncome,
-      totalExpense
-    };
+    const totalIncome = transactions.filter(t => t.type === 'income').reduce((acc, curr) => acc + curr.amount, 0);
+    const totalExpense = transactions.filter(t => t.type === 'expense').reduce((acc, curr) => acc + curr.amount, 0);
+    return { transactions, balance: totalIncome - totalExpense, totalIncome, totalExpense };
   }, [transactions]);
 
   const inventoryStats = useMemo(() => {
@@ -208,11 +186,9 @@ export default function App() {
     return { totalValue, lowStockItems };
   }, [inventory]);
 
-  // Chart Data
   const chartData = useMemo(() => {
     const data: any[] = [];
     const sortedTx = [...transactions].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-    
     let runningBalance = 0;
     sortedTx.forEach(tx => {
       runningBalance += tx.type === 'income' ? tx.amount : -tx.amount;
@@ -237,68 +213,36 @@ export default function App() {
   }, [transactions]);
 
   // --- Handlers ---
-
   const openAddTxModal = (type: TransactionType) => {
     setNewTxType(type);
     setEditingTxId(null);
-    setAmount('');
-    setDescription('');
-    setCategory('');
-    setIsAddModalOpen(true);
+    setAmount(''); setDescription(''); setCategory(''); setIsAddModalOpen(true);
   };
-
   const openEditTxModal = (tx: Transaction) => {
-    setNewTxType(tx.type);
-    setEditingTxId(tx.id);
-    setAmount(tx.amount.toString());
-    setDescription(tx.description);
-    setCategory(tx.category);
-    setIsAddModalOpen(true);
+    setNewTxType(tx.type); setEditingTxId(tx.id); setAmount(tx.amount.toString()); setDescription(tx.description); setCategory(tx.category); setIsAddModalOpen(true);
   };
-
   const handleSaveTransaction = () => {
     if (!amount || !description || !category) return;
-    
-    if (editingTxId) {
-      // Edit Mode
-      setTransactions(prev => prev.map(t => {
-        if (t.id === editingTxId) {
-           return {
-             ...t,
-             amount: parseFloat(amount),
-             description,
-             category,
-             type: newTxType
-           }
-        }
-        return t;
-      }));
-    } else {
-      // Add Mode
-      const newTx: Transaction = {
-        id: generateId(),
-        date: new Date().toISOString(),
-        amount: parseFloat(amount),
-        description,
-        type: newTxType,
-        category
-      };
-      setTransactions(prev => [newTx, ...prev]);
-    }
-
-    setAmount('');
-    setDescription('');
-    setCategory('');
-    setEditingTxId(null);
+    const newTx: Transaction = {
+      id: editingTxId || generateId(),
+      date: editingTxId ? transactions.find(t => t.id === editingTxId)!.date : new Date().toISOString(),
+      amount: parseFloat(amount),
+      description,
+      type: newTxType,
+      category
+    };
+    if (editingTxId) setTransactions(prev => prev.map(t => t.id === editingTxId ? newTx : t));
+    else setTransactions(prev => [newTx, ...prev]);
     setIsAddModalOpen(false);
   };
-
+  const handleDeleteTransaction = (id: string) => {
+    if (window.confirm('Delete this transaction?')) setTransactions(prev => prev.filter(t => t.id !== id));
+  };
+  
   const handleAddInventory = () => {
     if (!invName || !invQuantity || !invCost) return;
-
     const qty = parseInt(invQuantity);
     const cost = parseFloat(invCost);
-    
     const newItem: InventoryItem = {
       id: generateId(),
       name: invName,
@@ -308,1078 +252,491 @@ export default function App() {
       reorderLevel: parseInt(invReorder),
       lastUpdated: new Date().toISOString()
     };
-
     setInventory(prev => [newItem, ...prev]);
-
     if (logAsExpense) {
-      const totalCost = qty * cost;
-      const expenseTx: Transaction = {
-        id: generateId(),
-        date: new Date().toISOString(),
-        amount: totalCost,
-        description: `Stock Purchase: ${invName} (x${qty})`,
-        type: 'expense',
-        category: 'Inventory (Fabric)'
-      };
-      setTransactions(prev => [expenseTx, ...prev]);
+      setTransactions(prev => [{
+        id: generateId(), date: new Date().toISOString(), amount: qty * cost,
+        description: `Stock Purchase: ${invName} (x${qty})`, type: 'expense', category: 'Inventory (Fabric)'
+      }, ...prev]);
     }
-
-    setInvName('');
-    setInvCategory('Raw Material');
-    setInvQuantity('');
-    setInvCost('');
-    setLogAsExpense(false);
-    setIsInventoryModalOpen(false);
+    setInvName(''); setInvCategory('Raw Material'); setInvQuantity(''); setInvCost(''); setIsInventoryModalOpen(false);
   };
-
-  const openCustomerModal = (customer?: Customer) => {
-    if (customer) {
-      setEditingCustId(customer.id);
-      setCustName(customer.name);
-      setCustPhone(customer.phone);
-      setCustEmail(customer.email);
-      setCustAddress(customer.address);
-      setCustNotes(customer.notes);
-    } else {
-      setEditingCustId(null);
-      setCustName('');
-      setCustPhone('');
-      setCustEmail('');
-      setCustAddress('');
-      setCustNotes('');
-    }
-    setIsCustomerModalOpen(true);
+  const handleDeleteInventory = (id: string) => {
+    if (window.confirm('Remove item?')) setInventory(prev => prev.filter(i => i.id !== id));
+  };
+  const handleAdjustStock = (id: string, val: number) => {
+    setInventory(prev => prev.map(i => i.id === id ? { ...i, quantity: Math.max(0, i.quantity + val) } : i));
   };
 
   const handleSaveCustomer = () => {
     if (!custName) return;
-
-    if (editingCustId) {
-      setCustomers(prev => prev.map(c => c.id === editingCustId ? {
-        ...c,
-        name: custName,
-        phone: custPhone,
-        email: custEmail,
-        address: custAddress,
-        notes: custNotes
-      } : c));
-    } else {
-      const newCustomer: Customer = {
-        id: generateId(),
-        name: custName,
-        phone: custPhone,
-        email: custEmail,
-        address: custAddress,
-        notes: custNotes,
-        totalSpent: 0
-      };
-      setCustomers(prev => [...prev, newCustomer]);
-    }
+    const newC: Customer = {
+      id: editingCustId || generateId(),
+      name: custName, phone: custPhone, email: custEmail, address: custAddress, notes: custNotes, totalSpent: 0
+    };
+    if (editingCustId) setCustomers(prev => prev.map(c => c.id === editingCustId ? newC : c));
+    else setCustomers(prev => [...prev, newC]);
     setIsCustomerModalOpen(false);
   };
 
-  const handleDeleteCustomer = (id: string) => {
-    if (window.confirm('Delete this customer?')) {
-      setCustomers(prev => prev.filter(c => c.id !== id));
-    }
-  };
-
-  const handleAdjustStock = (id: string, adjustment: number) => {
-    setInventory(prev => prev.map(item => {
-      if (item.id === id) {
-        const newQty = Math.max(0, item.quantity + adjustment);
-        return { ...item, quantity: newQty, lastUpdated: new Date().toISOString() };
-      }
-      return item;
-    }));
-  };
-
-  const handleDeleteTransaction = (id: string) => {
-    if (window.confirm('Delete this transaction?')) {
-      setTransactions(prev => prev.filter(t => t.id !== id));
-    }
-  };
-
-  const handleDeleteInventory = (id: string) => {
-    if (window.confirm('Remove this item from inventory?')) {
-      setInventory(prev => prev.filter(i => i.id !== id));
-    }
-  };
-
   const handleResetData = () => {
-    if (window.confirm("WARNING: This will delete ALL transactions, inventory, and customers from this device. This cannot be undone.")) {
-       if (window.confirm("Are you absolutely sure?")) {
-         setTransactions([]);
-         setInventory([]);
-         setCustomers([]);
-         localStorage.clear();
-         alert("All data has been reset to 0.");
-         setShowMenu(false);
-       }
+    if (window.confirm("WARNING: Wipe all data?")) {
+      setTransactions([]); setInventory([]); setCustomers([]);
+      localStorage.clear();
     }
-  };
-
-  const handleSaveProfile = () => {
-    setBusinessProfile({ name: profName, subtitle: profSubtitle });
-    setShowProfileModal(false);
-  };
-
-  // --- Data Management ---
-
-  const handleExport = () => {
-    const exportData = {
-      transactions,
-      inventory,
-      customers,
-      profile: businessProfile,
-      exportedAt: new Date().toISOString(),
-      version: "1.3"
-    };
-    const dataStr = JSON.stringify(exportData, null, 2);
-    const blob = new Blob([dataStr], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `typo_backup_${new Date().toISOString().split('T')[0]}.json`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    setShowMenu(false);
-  };
-
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const handleImportFile = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      try {
-        const result = e.target?.result as string;
-        const data = JSON.parse(result);
-        
-        if (Array.isArray(data)) {
-          setTransactions(data);
-          alert('Legacy transactions imported successfully!');
-        } else if (data.transactions || data.inventory || data.customers) {
-          if (data.transactions) setTransactions(data.transactions);
-          if (data.inventory) setInventory(data.inventory);
-          if (data.customers) setCustomers(data.customers);
-          if (data.profile) setBusinessProfile(data.profile);
-          alert('Full system backup imported successfully!');
-        } else {
-          alert('Invalid file format.');
-        }
-      } catch (err) {
-        alert('Error parsing file.');
-      }
-    };
-    reader.readAsText(file);
-    if (event.target) event.target.value = '';
-    setShowMenu(false);
   };
 
   // --- Views ---
 
-  const DashboardView = () => (
-    <div className="space-y-6 pb-24 animate-in fade-in duration-500">
-      {/* Main Balance Card */}
-      <div className="relative overflow-hidden bg-typo-teal rounded-[2.5rem] p-8 shadow-2xl text-white">
-        <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none"></div>
-        <div className="absolute bottom-0 left-0 w-48 h-48 bg-black/20 rounded-full blur-2xl -ml-10 -mb-10 pointer-events-none"></div>
-        
-        <div className="relative z-10">
-          <div className="flex justify-between items-start mb-8">
-            <div>
-              <h2 className="font-display font-bold text-4xl tracking-tight">{businessProfile.name}</h2>
-              <p className="text-typo-accent/80 text-xs uppercase tracking-[0.2em] font-medium mt-1">{businessProfile.subtitle}</p>
-            </div>
-            <div className="bg-white/10 p-2.5 rounded-xl backdrop-blur-md border border-white/10">
-              <Package className="text-typo-accent w-6 h-6" />
-            </div>
-          </div>
+  const DashboardView = () => {
+    const isEmpty = transactions.length === 0 && inventory.length === 0;
 
-          <div className="space-y-1">
-            <p className="text-typo-accent/70 text-sm font-medium tracking-wide">Net Profit</p>
-            <div className="flex items-baseline gap-2">
-              <h1 className="text-4xl sm:text-5xl font-display font-bold text-white tracking-wider tabular-nums">
-                {formatMMK(financials.balance)}
-              </h1>
-              <span className="text-lg font-normal text-white/50 font-display">MMK</span>
-            </div>
-          </div>
-
-          <div className="mt-8 flex gap-3">
-             <button 
-               onClick={() => openAddTxModal('income')}
-               className="flex-1 bg-typo-accent text-typo-teal py-3 px-4 rounded-xl font-display font-bold text-sm hover:bg-white transition-colors flex items-center justify-center gap-2 shadow-lg"
-             >
-               <Plus className="w-4 h-4" /> Add Income
-             </button>
-             <button 
-                onClick={() => openAddTxModal('expense')}
-                className="flex-1 bg-black/20 text-white py-3 px-4 rounded-xl font-display font-bold text-sm hover:bg-black/30 transition-colors backdrop-blur-sm flex items-center justify-center gap-2 border border-white/10"
-             >
-               <ArrowUpRight className="w-4 h-4" /> Expense
-             </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Stats Grid */}
-      <div className="grid grid-cols-2 gap-4">
-        <Card className="!p-4 bg-[#F0F7F7] dark:bg-[#0E5E5E] group">
-          <div className="flex items-center gap-2 mb-3">
-            <div className="bg-green-100 dark:bg-green-500/20 p-2 rounded-full">
-              <ArrowDownLeft className="text-green-600 dark:text-green-400 w-4 h-4" />
-            </div>
-            <span className="text-xs font-bold text-gray-500 dark:text-typo-accent/70 uppercase tracking-wider">Income</span>
-          </div>
-          <p className="text-xl font-display font-bold text-typo-dark dark:text-white tabular-nums">{formatMMK(financials.totalIncome)}</p>
-        </Card>
-
-        <Card className="!p-4 bg-[#F0F7F7] dark:bg-[#0E5E5E] group">
-          <div className="flex items-center gap-2 mb-3">
-            <div className="bg-red-100 dark:bg-red-500/20 p-2 rounded-full">
-              <ArrowUpRight className="text-red-600 dark:text-red-400 w-4 h-4" />
-            </div>
-            <span className="text-xs font-bold text-gray-500 dark:text-typo-accent/70 uppercase tracking-wider">Expense</span>
-          </div>
-          <p className="text-xl font-display font-bold text-typo-dark dark:text-white tabular-nums">{formatMMK(financials.totalExpense)}</p>
-        </Card>
-      </div>
-
-       {/* Pie Chart */}
-       {pieData.length > 0 && (
-        <Card className="!p-0 overflow-hidden bg-white dark:bg-typo-teal flex flex-col">
-          <div className="p-6 pb-2">
-             <h3 className="font-display font-bold text-lg text-typo-dark dark:text-white flex items-center gap-2">
-                <PieChartIcon className="w-5 h-5 text-typo-teal dark:text-typo-accent" />
-                Expense Breakdown
-             </h3>
-          </div>
-          <div className="w-full h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={pieData}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={60}
-                  outerRadius={80}
-                  paddingAngle={5}
-                  dataKey="value"
-                >
-                  {pieData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip 
-                   formatter={(value: number) => formatMMK(value)}
-                   contentStyle={{ backgroundColor: '#051F1F', border: 'none', borderRadius: '8px', color: '#fff' }}
-                />
-                <Legend />
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
-        </Card>
-      )}
-
-      {/* Quick Actions */}
-      <div className="flex gap-4 overflow-x-auto pb-2 -mx-4 px-4 custom-scrollbar">
-         <button onClick={() => setIsInventoryModalOpen(true)} className="flex-none bg-white dark:bg-typo-light p-4 rounded-2xl border border-gray-100 dark:border-white/5 flex items-center gap-3 min-w-[160px] shadow-sm">
-            <div className="bg-purple-100 dark:bg-purple-900/30 p-2 rounded-lg text-purple-600 dark:text-purple-400">
-               <Box size={20} />
-            </div>
-            <div className="text-left">
-               <div className="font-bold text-sm text-typo-dark dark:text-white">Add Stock</div>
-               <div className="text-[10px] text-gray-500">Log new items</div>
-            </div>
-         </button>
-         <button onClick={() => { setActiveTab('inventory'); }} className="flex-none bg-white dark:bg-typo-light p-4 rounded-2xl border border-gray-100 dark:border-white/5 flex items-center gap-3 min-w-[160px] shadow-sm">
-            <div className="bg-orange-100 dark:bg-orange-900/30 p-2 rounded-lg text-orange-600 dark:text-orange-400">
-               <AlertTriangle size={20} />
-            </div>
-            <div className="text-left">
-               <div className="font-bold text-sm text-typo-dark dark:text-white">Check Low</div>
-               <div className="text-[10px] text-gray-500">{inventoryStats.lowStockItems} items alert</div>
-            </div>
-         </button>
-      </div>
-
-      {/* Recent Transactions */}
-      <div className="bg-typo-teal dark:bg-typo-teal rounded-[2rem] p-1 shadow-inner shadow-black/20">
-        <div className="bg-[#F5FBFB] dark:bg-[#0B2A2A] rounded-[1.8rem] p-5 min-h-[300px]">
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="font-display font-bold text-typo-dark dark:text-white text-lg tracking-wide">Recent</h3>
-            <button onClick={() => setActiveTab('ledger')} className="text-xs text-typo-teal dark:text-typo-accent bg-typo-teal/10 dark:bg-white/10 px-3 py-1 rounded-full hover:bg-typo-teal/20 transition-colors font-semibold">View All</button>
+    if (isEmpty) {
+      return (
+        <div className="flex flex-col h-full animate-in fade-in duration-500">
+          <div className="mb-8">
+            <h2 className="font-display font-bold text-3xl text-white">Overview</h2>
+            <p className="text-gray-400">Business performance at a glance.</p>
           </div>
           
-          <div className="space-y-3">
-            {transactions.slice(0, 5).map((tx) => (
-              <div onClick={() => openEditTxModal(tx)} key={tx.id} className="flex items-center justify-between bg-white dark:bg-typo-light/30 p-4 rounded-xl shadow-sm border border-gray-100 dark:border-white/5 active:scale-95 transition-transform cursor-pointer">
-                <div className="flex items-center gap-4">
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                    tx.type === 'income' 
-                      ? 'bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400' 
-                      : 'bg-orange-100 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400'
-                  }`}>
-                    {tx.type === 'income' ? <ArrowDownLeft size={18} /> : <TrendingUp size={18} />}
+          <div className="flex-1 border-2 border-dashed border-white/10 rounded-3xl flex flex-col items-center justify-center p-12 bg-[#051F1F]/50">
+             <div className="w-16 h-16 bg-typo-teal/20 rounded-2xl flex items-center justify-center mb-6 text-typo-accent animate-pulse">
+                <LayoutDashboard className="w-8 h-8" />
+             </div>
+             <h3 className="font-display font-bold text-2xl text-white mb-2">Start Your Business Journey</h3>
+             <p className="text-gray-400 max-w-md text-center mb-8">Your dashboard is empty. Start by adding your initial inventory or recording your startup expenses.</p>
+             <div className="flex gap-4">
+                <Button onClick={() => setIsInventoryModalOpen(true)} variant="secondary" className="!px-6 !py-3">
+                   <Box className="w-4 h-4" /> Go to Stock Room
+                </Button>
+                <Button onClick={() => openAddTxModal('income')} variant="primary" className="!px-6 !py-3">
+                   <ArrowDownLeft className="w-4 h-4" /> Record Money
+                </Button>
+             </div>
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div className="space-y-6 animate-in fade-in duration-500 pb-10">
+        <div>
+           <h2 className="font-display font-bold text-3xl text-white">Overview</h2>
+           <p className="text-gray-400">Welcome back, {businessProfile.owner.split(' ')[0]}.</p>
+        </div>
+
+        <div className="grid grid-cols-3 gap-6">
+           <Card className="col-span-1 bg-gradient-to-br from-typo-teal to-[#0A4545] border-none shadow-xl">
+              <p className="text-typo-accent/80 text-xs font-bold uppercase tracking-wider mb-2">Total Balance</p>
+              <h1 className="text-4xl font-display font-bold text-white mb-4">{formatMMK(financials.balance)}</h1>
+              <div className="flex gap-2">
+                 <div className="flex-1 bg-black/20 rounded-lg p-3">
+                    <div className="flex items-center gap-2 mb-1">
+                       <div className="w-2 h-2 rounded-full bg-green-400"></div>
+                       <span className="text-xs text-gray-300">Income</span>
+                    </div>
+                    <p className="text-lg font-bold text-white">{formatMMK(financials.totalIncome)}</p>
+                 </div>
+                 <div className="flex-1 bg-black/20 rounded-lg p-3">
+                    <div className="flex items-center gap-2 mb-1">
+                       <div className="w-2 h-2 rounded-full bg-red-400"></div>
+                       <span className="text-xs text-gray-300">Expense</span>
+                    </div>
+                    <p className="text-lg font-bold text-white">{formatMMK(financials.totalExpense)}</p>
+                 </div>
+              </div>
+           </Card>
+
+           <Card className="col-span-2 flex flex-col">
+              <div className="flex justify-between items-center mb-4">
+                 <h3 className="font-bold text-white">Cash Flow</h3>
+                 <select className="bg-black/20 border-none text-xs text-gray-400 rounded-lg px-2 py-1">
+                    <option>Last 30 Days</option>
+                 </select>
+              </div>
+              <div className="flex-1 h-[180px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={chartData}>
+                    <defs>
+                      <linearGradient id="colorBalance" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#C4ECE8" stopOpacity={0.3}/>
+                        <stop offset="95%" stopColor="#C4ECE8" stopOpacity={0}/>
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" vertical={false} />
+                    <XAxis dataKey="date" stroke="#ffffff50" fontSize={10} tickLine={false} axisLine={false} />
+                    <YAxis stroke="#ffffff50" fontSize={10} tickLine={false} axisLine={false} tickFormatter={(val) => `${val/1000}k`} />
+                    <Tooltip contentStyle={{ backgroundColor: '#051F1F', borderColor: '#ffffff20', color: '#fff' }} />
+                    <Area type="monotone" dataKey="balance" stroke="#C4ECE8" strokeWidth={3} fillOpacity={1} fill="url(#colorBalance)" />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+           </Card>
+        </div>
+
+        <div className="grid grid-cols-3 gap-6">
+           <Card className="col-span-2">
+              <div className="flex justify-between items-center mb-4">
+                 <h3 className="font-bold text-white">Recent Transactions</h3>
+                 <Button onClick={() => setActiveTab('ledger')} variant="ghost" className="!p-0 text-xs">View All</Button>
+              </div>
+              <div className="space-y-3">
+                 {transactions.slice(0, 4).map(tx => (
+                    <div key={tx.id} onClick={() => openEditTxModal(tx)} className="flex items-center justify-between p-3 rounded-xl bg-white/5 hover:bg-white/10 transition-colors cursor-pointer group">
+                       <div className="flex items-center gap-3">
+                          <div className={`w-10 h-10 rounded-full flex items-center justify-center ${tx.type === 'income' ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}>
+                             {tx.type === 'income' ? <ArrowDownLeft size={18} /> : <ArrowUpRight size={18} />}
+                          </div>
+                          <div>
+                             <p className="font-bold text-white text-sm">{tx.description}</p>
+                             <p className="text-xs text-gray-500">{new Date(tx.date).toLocaleDateString()}</p>
+                          </div>
+                       </div>
+                       <div className="text-right">
+                          <p className={`font-display font-bold text-sm ${tx.type === 'income' ? 'text-green-400' : 'text-white'}`}>
+                             {tx.type === 'income' ? '+' : '-'} {formatMMK(tx.amount)}
+                          </p>
+                          <p className="text-[10px] text-gray-500">{tx.category}</p>
+                       </div>
+                    </div>
+                 ))}
+              </div>
+           </Card>
+
+           <Card className="col-span-1">
+              <h3 className="font-bold text-white mb-4">Expense Breakdown</h3>
+              <div className="h-[200px]">
+                 <ResponsiveContainer width="100%" height="100%">
+                   <PieChart>
+                     <Pie data={pieData} innerRadius={60} outerRadius={80} paddingAngle={5} dataKey="value">
+                       {pieData.map((entry, index) => <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />)}
+                     </Pie>
+                     <Tooltip contentStyle={{ backgroundColor: '#051F1F', border: 'none', borderRadius: '8px', color: '#fff' }} formatter={(val: number) => formatMMK(val)} />
+                     <Legend iconSize={8} wrapperStyle={{ fontSize: '10px' }} />
+                   </PieChart>
+                 </ResponsiveContainer>
+              </div>
+           </Card>
+        </div>
+      </div>
+    );
+  };
+
+  const ConsultantView = () => {
+    // Basic heuristics for "AI" advice
+    const netProfit = financials.totalIncome - financials.totalExpense;
+    const margin = financials.totalIncome > 0 ? (netProfit / financials.totalIncome) * 100 : 0;
+    const burnRate = financials.totalExpense / (transactions.length > 0 ? transactions.length : 1); // Avg expense per tx (simplified)
+    const inventoryVal = inventoryStats.totalValue;
+
+    let advice = "Your business is just starting. Keep tracking!";
+    if (margin > 30) advice = "Excellent profit margin! Consider reinvesting surplus into high-performing inventory.";
+    else if (margin < 10 && financials.totalIncome > 0) advice = "Margins are tight. Review your supplier costs or consider raising prices.";
+    if (netProfit < 0) advice = "You are currently operating at a loss. Focus on high-margin sales and reducing overhead.";
+
+    return (
+       <div className="space-y-6 animate-in slide-in-from-right duration-300">
+         <div>
+            <h2 className="font-display font-bold text-3xl text-white flex items-center gap-3">
+               <Sparkles className="text-typo-accent" /> AI Consultant
+            </h2>
+            <p className="text-gray-400">Automated insights based on your data.</p>
+         </div>
+
+         <div className="grid grid-cols-3 gap-6">
+            <Card className="bg-gradient-to-br from-purple-900/40 to-typo-dark border-purple-500/20">
+               <div className="flex items-start justify-between mb-4">
+                  <div className="p-2 bg-purple-500/20 rounded-lg text-purple-400"><TrendingUp size={20} /></div>
+                  <span className={`text-xs font-bold px-2 py-1 rounded ${margin > 0 ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}>
+                     {margin.toFixed(1)}%
+                  </span>
+               </div>
+               <p className="text-gray-400 text-xs uppercase tracking-wider font-bold">Net Profit Margin</p>
+               <h3 className="text-2xl font-display font-bold text-white mt-1">{margin > 0 ? 'Healthy' : 'Needs Work'}</h3>
+            </Card>
+
+            <Card className="bg-gradient-to-br from-orange-900/40 to-typo-dark border-orange-500/20">
+               <div className="flex items-start justify-between mb-4">
+                  <div className="p-2 bg-orange-500/20 rounded-lg text-orange-400"><Activity size={20} /></div>
+               </div>
+               <p className="text-gray-400 text-xs uppercase tracking-wider font-bold">Burn Rate (Avg/Tx)</p>
+               <h3 className="text-2xl font-display font-bold text-white mt-1">{formatMMK(burnRate)}</h3>
+            </Card>
+
+            <Card className="bg-gradient-to-br from-blue-900/40 to-typo-dark border-blue-500/20">
+               <div className="flex items-start justify-between mb-4">
+                  <div className="p-2 bg-blue-500/20 rounded-lg text-blue-400"><Box size={20} /></div>
+               </div>
+               <p className="text-gray-400 text-xs uppercase tracking-wider font-bold">Inventory Value</p>
+               <h3 className="text-2xl font-display font-bold text-white mt-1">{formatMMK(inventoryVal)}</h3>
+            </Card>
+         </div>
+
+         <div className="grid grid-cols-2 gap-6">
+            <Card className="col-span-2 relative overflow-hidden">
+               <div className="absolute top-0 right-0 w-64 h-64 bg-typo-accent/5 rounded-full blur-3xl -mr-10 -mt-10"></div>
+               <div className="relative z-10 flex gap-6 items-start">
+                  <div className="w-16 h-16 bg-typo-teal rounded-full flex items-center justify-center shrink-0 border-4 border-[#0E2A2A] shadow-xl">
+                     <BrainCircuit className="w-8 h-8 text-typo-accent" />
                   </div>
                   <div>
-                    <h4 className="font-bold text-gray-800 dark:text-gray-200 text-sm line-clamp-1">{tx.description}</h4>
-                    <p className="text-[10px] text-gray-500 uppercase tracking-wide font-medium">{tx.category}</p>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <p className={`font-display font-bold text-sm ${
-                    tx.type === 'income' ? 'text-green-600 dark:text-green-400' : 'text-typo-dark dark:text-white'
-                  }`}>
-                    {tx.type === 'income' ? '+' : '-'} {formatMMK(tx.amount)}
-                  </p>
-                  <p className="text-[10px] text-gray-400">{new Date(tx.date).toLocaleDateString()}</p>
-                </div>
-              </div>
-            ))}
-            {transactions.length === 0 && (
-              <div className="text-center py-12 opacity-50">
-                <div className="mx-auto w-12 h-12 bg-gray-200 dark:bg-white/10 rounded-full flex items-center justify-center mb-2">
-                   <LayoutDashboard className="w-6 h-6 text-gray-400" />
-                </div>
-                <p className="text-sm font-medium">No transactions yet.</p>
-                <p className="text-xs">Start by adding income or expenses.</p>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-
-  const InventoryView = () => (
-    <div className="space-y-6 pb-24 animate-in slide-in-from-right duration-300">
-       <div className="sticky top-0 bg-[#F0F7F7] dark:bg-[#051F1F] z-20 pb-4 pt-2">
-        <h2 className="font-display font-bold text-3xl text-typo-dark dark:text-white mb-4 pl-2">INVENTORY</h2>
-        <div className="relative">
-          <Search className="absolute left-4 top-3.5 text-gray-400 w-5 h-5" />
-          <input 
-            type="text" 
-            placeholder="Search fabric, items..." 
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full bg-white dark:bg-typo-light rounded-2xl py-3 pl-12 pr-4 text-typo-dark dark:text-white shadow-sm border-none focus:ring-2 focus:ring-typo-teal placeholder-gray-400 font-display tracking-wide"
-          />
-        </div>
-      </div>
-
-      {/* Inventory Stats */}
-      <div className="grid grid-cols-2 gap-4">
-        <Card className="!p-4 bg-typo-teal text-white">
-           <div className="text-typo-accent/80 text-xs font-bold uppercase tracking-wider mb-2">Total Value</div>
-           <div className="text-2xl font-display font-bold">{formatMMK(inventoryStats.totalValue)}</div>
-           <div className="text-[10px] opacity-60">Assets on hand</div>
-        </Card>
-        <Card className="!p-4 bg-white dark:bg-typo-light">
-           <div className="text-gray-500 dark:text-typo-accent/80 text-xs font-bold uppercase tracking-wider mb-2">Low Stock</div>
-           <div className="flex items-center gap-2">
-             <div className="text-2xl font-display font-bold text-orange-500">{inventoryStats.lowStockItems}</div>
-             {inventoryStats.lowStockItems > 0 && <AlertTriangle className="w-5 h-5 text-orange-500 animate-pulse" />}
-           </div>
-           <div className="text-[10px] text-gray-400">Items need restock</div>
-        </Card>
-      </div>
-
-      <div className="flex justify-end">
-        <Button onClick={() => setIsInventoryModalOpen(true)} className="!py-2 !px-4 text-xs">
-          <Plus className="w-4 h-4" /> Add Item
-        </Button>
-      </div>
-
-      {/* Inventory List */}
-      <div className="space-y-3">
-        {inventory
-           .filter(i => i.name.toLowerCase().includes(searchTerm.toLowerCase()) || i.category.toLowerCase().includes(searchTerm.toLowerCase()))
-           .map(item => (
-           <div key={item.id} className="bg-white dark:bg-typo-light p-4 rounded-2xl border border-gray-100 dark:border-white/5 shadow-sm">
-              <div className="flex justify-between items-start mb-3">
-                 <div className="flex gap-3">
-                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
-                      item.category === 'Raw Material' ? 'bg-blue-100 text-blue-600' : 
-                      item.category === 'Finished Product' ? 'bg-green-100 text-green-600' :
-                      'bg-gray-100 text-gray-600'
-                    }`}>
-                      <Box size={18} />
-                    </div>
-                    <div>
-                      <h4 className="font-bold text-typo-dark dark:text-white">{item.name}</h4>
-                      <span className="text-[10px] px-2 py-0.5 bg-gray-100 dark:bg-black/20 rounded text-gray-500 font-bold uppercase tracking-wide">{item.category}</span>
-                    </div>
-                 </div>
-                 <button onClick={() => handleDeleteInventory(item.id)} className="text-gray-300 hover:text-red-500 p-1">
-                    <Trash2 size={16} />
-                 </button>
-              </div>
-              
-              <div className="grid grid-cols-2 gap-4 border-t border-dashed border-gray-200 dark:border-white/10 pt-3 mt-1">
-                 <div>
-                    <div className="text-[10px] text-gray-400 uppercase font-bold">Unit Cost</div>
-                    <div className="text-sm font-display font-bold text-typo-dark dark:text-typo-accent">{formatMMK(item.unitCost)}</div>
-                 </div>
-                 <div className="text-right">
-                    <div className="text-[10px] text-gray-400 uppercase font-bold">Total Value</div>
-                    <div className="text-sm font-display font-bold text-typo-dark dark:text-white">{formatMMK(item.unitCost * item.quantity)}</div>
-                 </div>
-              </div>
-
-              <div className="mt-4 flex items-center justify-between bg-gray-50 dark:bg-black/20 rounded-xl p-2">
-                 <button onClick={() => handleAdjustStock(item.id, -1)} className="w-8 h-8 flex items-center justify-center bg-white dark:bg-typo-light rounded-lg shadow-sm text-gray-500 hover:text-red-500 active:scale-95 transition-all">
-                    <Minus size={14} />
-                 </button>
-                 <div className={`font-display font-bold text-lg ${item.quantity <= item.reorderLevel ? 'text-orange-500' : 'text-typo-dark dark:text-white'}`}>
-                    {item.quantity}
-                 </div>
-                 <button onClick={() => handleAdjustStock(item.id, 1)} className="w-8 h-8 flex items-center justify-center bg-white dark:bg-typo-light rounded-lg shadow-sm text-gray-500 hover:text-green-500 active:scale-95 transition-all">
-                    <Plus size={14} />
-                 </button>
-              </div>
-           </div>
-        ))}
-        {inventory.length === 0 && (
-          <div className="text-center py-10 opacity-50">
-             <Package className="w-12 h-12 mx-auto mb-2 text-gray-300" />
-             <p className="text-sm">Inventory is empty</p>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-
-  const LedgerView = () => (
-    <div className="space-y-6 pb-24 animate-in slide-in-from-right duration-300">
-      <div className="sticky top-0 bg-[#F0F7F7] dark:bg-[#051F1F] z-20 pb-4 pt-2">
-        <h2 className="font-display font-bold text-3xl text-typo-dark dark:text-white mb-4 pl-2">LEDGER</h2>
-        <div className="relative">
-          <Search className="absolute left-4 top-3.5 text-gray-400 w-5 h-5" />
-          <input 
-            type="text" 
-            placeholder="Search transactions..." 
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full bg-white dark:bg-typo-light rounded-2xl py-3 pl-12 pr-4 text-typo-dark dark:text-white shadow-sm border-none focus:ring-2 focus:ring-typo-teal placeholder-gray-400 font-display tracking-wide"
-          />
-        </div>
-      </div>
-
-      <div className="bg-white dark:bg-typo-light rounded-3xl overflow-hidden shadow-lg border border-gray-100 dark:border-white/5">
-        <div className="overflow-x-auto custom-scrollbar">
-          <table className="w-full text-left">
-            <thead className="bg-typo-teal text-white font-display text-sm tracking-wider">
-              <tr>
-                <th className="p-4 font-semibold">DATE</th>
-                <th className="p-4 font-semibold">DESC</th>
-                <th className="p-4 font-semibold">CAT</th>
-                <th className="p-4 font-semibold text-right">AMOUNT</th>
-                <th className="p-4 font-semibold text-center">ACT</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100 dark:divide-white/5 text-sm">
-              {transactions
-                .filter(t => 
-                  t.description.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                  t.category.toLowerCase().includes(searchTerm.toLowerCase())
-                )
-                .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-                .map((tx) => (
-                <tr key={tx.id} onClick={() => openEditTxModal(tx)} className="hover:bg-gray-50 dark:hover:bg-white/5 transition-colors group cursor-pointer">
-                  <td className="p-4 text-gray-500 dark:text-gray-400 whitespace-nowrap font-mono text-xs">
-                    {new Date(tx.date).toLocaleDateString()}
-                  </td>
-                  <td className="p-4 text-typo-dark dark:text-white font-medium">
-                    {tx.description}
-                  </td>
-                  <td className="p-4">
-                    <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-1 rounded-md bg-gray-100 dark:bg-white/10 text-gray-600 dark:text-gray-300 whitespace-nowrap">
-                      {tx.category}
-                    </span>
-                  </td>
-                  <td className={`p-4 text-right font-display font-bold whitespace-nowrap ${
-                    tx.type === 'income' ? 'text-green-600 dark:text-green-400' : 'text-red-500 dark:text-red-400'
-                  }`}>
-                    {tx.type === 'expense' && '-'} {formatMMK(tx.amount)}
-                  </td>
-                  <td className="p-4 text-center flex items-center justify-center gap-2">
-                     <button onClick={(e) => { e.stopPropagation(); openEditTxModal(tx); }} className="text-gray-300 hover:text-typo-teal dark:hover:text-typo-accent transition-colors">
-                        <Edit2 className="w-4 h-4" />
-                     </button>
-                     <button onClick={(e) => { e.stopPropagation(); handleDeleteTransaction(tx.id); }} className="text-gray-300 hover:text-red-500 transition-colors">
-                       <Trash2 className="w-4 h-4" />
-                     </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          {transactions.length === 0 && (
-             <div className="p-8 text-center text-gray-400 text-sm">No records found.</div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-
-  const CustomersView = () => (
-    <div className="space-y-6 pb-24 animate-in slide-in-from-right duration-300">
-       <div className="sticky top-0 bg-[#F0F7F7] dark:bg-[#051F1F] z-20 pb-4 pt-2 flex justify-between items-end">
-        <div>
-           <h2 className="font-display font-bold text-3xl text-typo-dark dark:text-white pl-2">CUSTOMERS</h2>
-           <p className="text-xs text-gray-500 pl-2">CRM & Address Book</p>
-        </div>
-        <Button onClick={() => openCustomerModal()} className="!py-2 !px-4 text-xs">
-          <Plus className="w-4 h-4" /> Add
-        </Button>
-      </div>
-
-      <div className="grid gap-4">
-         {customers.map(c => (
-            <div key={c.id} className="bg-white dark:bg-typo-light p-5 rounded-2xl shadow-sm border border-gray-100 dark:border-white/5 relative group">
-               <div className="absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <button onClick={() => openCustomerModal(c)} className="p-1.5 rounded-full bg-gray-100 dark:bg-white/10 text-gray-500 hover:text-typo-teal">
-                     <Edit2 size={14} />
-                  </button>
-                  <button onClick={() => handleDeleteCustomer(c.id)} className="p-1.5 rounded-full bg-gray-100 dark:bg-white/10 text-gray-500 hover:text-red-500">
-                     <Trash2 size={14} />
-                  </button>
-               </div>
-               
-               <div className="flex items-start gap-4">
-                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-typo-teal to-typo-light flex items-center justify-center text-white font-display font-bold text-xl">
-                     {c.name.charAt(0)}
-                  </div>
-                  <div className="flex-1">
-                     <h3 className="font-bold text-lg text-typo-dark dark:text-white">{c.name}</h3>
+                     <h3 className="font-bold text-white text-lg mb-2">Consultant's Assessment</h3>
+                     <p className="text-gray-300 leading-relaxed text-sm mb-4">"{advice}"</p>
                      
-                     <div className="mt-2 space-y-1">
-                        {c.phone && (
-                           <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
-                              <Phone size={14} />
-                              <span>{c.phone}</span>
-                           </div>
-                        )}
-                        {c.address && (
-                           <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
-                              <MapPin size={14} />
-                              <span className="truncate max-w-[200px]">{c.address}</span>
-                           </div>
-                        )}
-                         {c.notes && (
-                           <div className="flex items-start gap-2 text-sm text-gray-500 dark:text-gray-400 mt-2 bg-gray-50 dark:bg-black/20 p-2 rounded-lg">
-                              <FileText size={14} className="mt-0.5" />
-                              <span className="text-xs italic">{c.notes}</span>
-                           </div>
-                        )}
+                     <div className="space-y-2">
+                        <div className="flex items-center gap-2 text-sm text-gray-400">
+                           <Lightbulb size={14} className="text-yellow-400" />
+                           <span>Tip: Keep your expenses logged daily for better accuracy.</span>
+                        </div>
                      </div>
                   </div>
                </div>
-            </div>
-         ))}
-         {customers.length === 0 && (
-          <div className="text-center py-10 opacity-50">
-             <Users className="w-12 h-12 mx-auto mb-2 text-gray-300" />
-             <p className="text-sm">No customers added yet</p>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-
-  const SettingsView = () => (
-    <div className="space-y-6 pb-24 animate-in slide-in-from-right duration-300">
-       <h2 className="font-display font-bold text-3xl text-typo-dark dark:text-white mb-6 pl-2">SETTINGS</h2>
-       
-       <Card className="!p-0 overflow-hidden bg-typo-teal text-white">
-          <div className="p-6 border-b border-white/10">
-            <h3 className="font-display font-bold text-xl mb-1">Data Management</h3>
-            <p className="text-sm text-typo-accent/70">Backup or restore your business data.</p>
-          </div>
-          <div className="p-6 grid gap-4">
-             <button 
-               onClick={handleExport}
-               className="w-full bg-white/10 hover:bg-white/20 border border-white/10 rounded-xl p-4 flex items-center justify-between group transition-all"
-             >
-                <div className="flex items-center gap-4">
-                  <div className="bg-typo-accent p-2 rounded-lg text-typo-teal">
-                    <Download className="w-5 h-5" />
-                  </div>
-                  <div className="text-left">
-                    <div className="font-bold text-white">Export Full Backup</div>
-                    <div className="text-xs text-white/50">Save transactions, stock & CRM</div>
-                  </div>
-                </div>
-                <div className="text-typo-accent opacity-0 group-hover:opacity-100 transition-opacity">
-                   <ArrowUpRight className="w-5 h-5" />
-                </div>
-             </button>
-
-             <button 
-               onClick={() => fileInputRef.current?.click()}
-               className="w-full bg-white/10 hover:bg-white/20 border border-white/10 rounded-xl p-4 flex items-center justify-between group transition-all"
-             >
-                <div className="flex items-center gap-4">
-                  <div className="bg-typo-accent p-2 rounded-lg text-typo-teal">
-                    <Upload className="w-5 h-5" />
-                  </div>
-                  <div className="text-left">
-                    <div className="font-bold text-white">Import Backup</div>
-                    <div className="text-xs text-white/50">Restore from JSON file</div>
-                  </div>
-                </div>
-                <div className="text-typo-accent opacity-0 group-hover:opacity-100 transition-opacity">
-                   <Plus className="w-5 h-5" />
-                </div>
-             </button>
-             <input 
-                type="file" 
-                ref={fileInputRef} 
-                onChange={handleImportFile} 
-                accept=".json" 
-                className="hidden" 
-             />
-          </div>
-       </Card>
-
-       <Card className="!p-0 overflow-hidden border-red-200 bg-red-50 dark:bg-red-900/10">
-          <div className="p-6">
-            <h3 className="font-display font-bold text-xl mb-1 text-red-600 dark:text-red-400">Danger Zone</h3>
-            <p className="text-sm text-red-600/60 dark:text-red-400/60 mb-4">Irreversible actions.</p>
-            
-            <button 
-               onClick={handleResetData}
-               className="w-full bg-red-100 hover:bg-red-200 text-red-600 dark:bg-red-900/20 dark:hover:bg-red-900/30 dark:text-red-400 p-4 rounded-xl flex items-center justify-center gap-2 font-bold transition-all"
-            >
-               <RotateCcw className="w-4 h-4" />
-               Reset All Data to 0
-            </button>
-          </div>
-       </Card>
-
-       <div className="p-4 text-center text-xs text-gray-400">
-          <p>TYPO Business Manager v1.4</p>
-          <p className="mt-1">Local Storage Mode • Data resides on this device</p>
+            </Card>
+         </div>
        </div>
-    </div>
-  );
+    );
+  };
+
+  // --- Layout Structure ---
 
   return (
-    <div className="min-h-screen bg-[#F0F7F7] dark:bg-[#051F1F] font-sans text-typo-dark dark:text-typo-surface transition-colors duration-300">
+    <div className="flex h-screen bg-[#020B0B] text-typo-surface overflow-hidden font-sans selection:bg-typo-teal selection:text-white">
       
-      {/* Top Navigation */}
-      <nav className="fixed top-0 w-full z-40 bg-[#F0F7F7]/80 dark:bg-[#051F1F]/80 backdrop-blur-md px-6 py-4 flex items-center justify-between max-w-md left-1/2 -translate-x-1/2">
-        <div className="relative">
-          <button 
-            onClick={() => setShowMenu(!showMenu)}
-            className="bg-typo-teal text-white p-2 rounded-lg shadow-lg hover:bg-typo-light transition-colors"
-          >
-            {showMenu ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-          </button>
-
-          {/* Quick Menu Dropdown */}
-          {showMenu && (
-            <div className="absolute top-12 left-0 bg-white dark:bg-typo-light border border-gray-100 dark:border-white/10 rounded-2xl shadow-xl w-48 overflow-hidden animate-in slide-in-from-top-2 duration-200">
-              <div className="p-2 space-y-1">
-                 <button onClick={handleExport} className="w-full text-left px-3 py-2 rounded-xl text-sm font-medium text-gray-700 dark:text-white hover:bg-gray-100 dark:hover:bg-white/10 flex items-center gap-2">
-                   <Download size={14} /> Export Data
-                 </button>
-                 <button onClick={() => fileInputRef.current?.click()} className="w-full text-left px-3 py-2 rounded-xl text-sm font-medium text-gray-700 dark:text-white hover:bg-gray-100 dark:hover:bg-white/10 flex items-center gap-2">
-                   <Upload size={14} /> Import Data
-                 </button>
-                 <div className="h-px bg-gray-100 dark:bg-white/10 my-1"></div>
-                 <button onClick={handleResetData} className="w-full text-left px-3 py-2 rounded-xl text-sm font-medium text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-2">
-                   <RotateCcw size={14} /> Reset App
-                 </button>
-              </div>
+      {/* Sidebar */}
+      <aside className="w-64 bg-[#051F1F] border-r border-white/5 flex flex-col shrink-0 transition-all duration-300 z-20">
+         <div className="h-20 flex items-center px-6 border-b border-white/5">
+            <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center mr-3">
+               <span className="font-display font-bold text-typo-dark text-xl">T</span>
             </div>
-          )}
-        </div>
+            <span className="font-display font-bold text-xl tracking-widest text-white">TYPO</span>
+         </div>
 
-        <span className="font-display font-bold text-lg tracking-widest text-typo-teal dark:text-typo-accent">
-          {activeTab === 'dashboard' ? 'DASHBOARD' : activeTab === 'ledger' ? 'LEDGER' : activeTab === 'inventory' ? 'STOCK' : activeTab === 'customers' ? 'CRM' : 'SYSTEM'}
-        </span>
-        
-        <div className="relative">
-          <button onClick={() => setShowProfileModal(true)} className="relative block">
-            <div className="w-9 h-9 bg-typo-teal rounded-full flex items-center justify-center text-typo-accent border-2 border-typo-accent shadow-lg">
-               <span className="font-display font-bold">{businessProfile.name.charAt(0)}</span>
-            </div>
-            <div className="absolute top-0 right-0 w-3 h-3 bg-green-400 rounded-full border-2 border-[#F0F7F7] dark:border-[#051F1F]"></div>
-          </button>
-        </div>
-      </nav>
+         <nav className="flex-1 py-6 px-3 space-y-1">
+            <button onClick={() => setActiveTab('dashboard')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'dashboard' ? 'bg-typo-teal text-white shadow-lg shadow-black/20' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}>
+               <LayoutDashboard size={20} />
+               <span className="font-medium text-sm">Dashboard</span>
+            </button>
+            <button onClick={() => setActiveTab('ledger')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'ledger' ? 'bg-typo-teal text-white shadow-lg shadow-black/20' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}>
+               <ArrowDownLeft size={20} />
+               <span className="font-medium text-sm">Money In/Out</span>
+            </button>
+            <button onClick={() => setActiveTab('inventory')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'inventory' ? 'bg-typo-teal text-white shadow-lg shadow-black/20' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}>
+               <Shirt size={20} />
+               <span className="font-medium text-sm">Stock Room</span>
+            </button>
+            <button onClick={() => setActiveTab('consultant')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'consultant' ? 'bg-typo-teal text-white shadow-lg shadow-black/20' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}>
+               <Sparkles size={20} />
+               <span className="font-medium text-sm">AI Consultant</span>
+            </button>
+            <button onClick={() => setActiveTab('settings')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'settings' ? 'bg-typo-teal text-white shadow-lg shadow-black/20' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}>
+               <Settings size={20} />
+               <span className="font-medium text-sm">Data & Settings</span>
+            </button>
+         </nav>
 
-      {/* Main Content Area */}
-      <main className="pt-24 px-4 max-w-md mx-auto min-h-screen relative">
-        {activeTab === 'dashboard' && <DashboardView />}
-        {activeTab === 'ledger' && <LedgerView />}
-        {activeTab === 'inventory' && <InventoryView />}
-        {activeTab === 'customers' && <CustomersView />}
-        {activeTab === 'settings' && <SettingsView />}
-      </main>
+         <div className="p-4 border-t border-white/5">
+            <button onClick={() => setShowProfileModal(true)} className="flex items-center gap-3 w-full p-2 rounded-xl hover:bg-white/5 transition-colors">
+               <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-purple-500 to-blue-500 flex items-center justify-center text-white font-bold border-2 border-[#051F1F]">
+                  {profOwner.charAt(0)}
+               </div>
+               <div className="text-left overflow-hidden">
+                  <p className="text-sm font-bold text-white truncate">{profOwner}</p>
+                  <p className="text-xs text-gray-500">Admin</p>
+               </div>
+            </button>
+         </div>
+      </aside>
 
-      {/* Bottom Floating Navigation */}
-      <div className="fixed bottom-6 left-0 right-0 flex justify-center z-50 pointer-events-none">
-        <div className="bg-typo-teal text-white rounded-full px-2 py-2 flex items-center gap-1 shadow-2xl border border-white/10 pointer-events-auto backdrop-blur-xl">
-          <button 
-            onClick={() => setActiveTab('dashboard')}
-            className={`p-3 rounded-full transition-all duration-300 ${activeTab === 'dashboard' ? 'bg-white/20 text-typo-accent' : 'hover:bg-white/10 text-white/50'}`}
-          >
-            <LayoutDashboard className="w-6 h-6" />
-          </button>
-          
-          <button 
-            onClick={() => setActiveTab('ledger')}
-            className={`p-3 rounded-full transition-all duration-300 ${activeTab === 'ledger' ? 'bg-white/20 text-typo-accent' : 'hover:bg-white/10 text-white/50'}`}
-          >
-            <Table2 className="w-6 h-6" />
-          </button>
-
-          <button 
-            onClick={() => openAddTxModal('income')}
-            className="bg-typo-accent text-typo-teal px-6 py-3 rounded-full font-bold font-display flex items-center gap-2 hover:bg-white transition-colors mx-2 shadow-lg active:scale-95"
-          >
-            <Plus className="w-5 h-5" />
-            <span>NEW</span>
-          </button>
-
-          <button 
-            onClick={() => setActiveTab('inventory')} 
-            className={`p-3 rounded-full transition-all duration-300 ${activeTab === 'inventory' ? 'bg-white/20 text-typo-accent' : 'hover:bg-white/10 text-white/50'}`}
-          >
-            <Package className="w-6 h-6" />
-          </button>
-
-          <button 
-            onClick={() => setActiveTab('customers')} 
-            className={`p-3 rounded-full transition-all duration-300 ${activeTab === 'customers' ? 'bg-white/20 text-typo-accent' : 'hover:bg-white/10 text-white/50'}`}
-          >
-            <Users className="w-6 h-6" />
-          </button>
-
-          <button 
-            onClick={() => setActiveTab('settings')}
-            className={`p-3 rounded-full transition-all duration-300 ${activeTab === 'settings' ? 'bg-white/20 text-typo-accent' : 'hover:bg-white/10 text-white/50'}`}
-          >
-            <Settings className="w-6 h-6" />
-          </button>
-        </div>
-      </div>
-
-      {/* Add/Edit Transaction Modal */}
-      <Modal
-        isOpen={isAddModalOpen}
-        onClose={() => setIsAddModalOpen(false)}
-        title={`${editingTxId ? 'Edit' : 'Add'} ${newTxType}`}
-      >
-        <div className="space-y-4">
-          <div>
-            <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-1">Amount (MMK)</label>
-            <input 
-              type="number" 
-              autoFocus
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              className="w-full bg-white dark:bg-black/20 border-2 border-gray-200 dark:border-white/10 rounded-xl p-3 text-2xl font-display font-bold text-typo-teal dark:text-white focus:ring-0 focus:border-typo-teal outline-none"
-              placeholder="0"
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-1">Description</label>
-            <input 
-              type="text" 
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              className="w-full bg-white dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl p-3 font-medium text-typo-dark dark:text-white focus:ring-2 focus:ring-typo-teal/50 outline-none"
-              placeholder="e.g. Cotton Fabric Batch A"
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-1">Category</label>
-            <div className="grid grid-cols-2 gap-2">
-              {CATEGORIES[newTxType].map((cat) => (
-                <button
-                  key={cat}
-                  onClick={() => setCategory(cat)}
-                  className={`p-2 rounded-lg text-xs font-bold transition-all ${
-                    category === cat 
-                      ? 'bg-typo-teal text-white shadow-md' 
-                      : 'bg-gray-100 dark:bg-white/5 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-white/10'
-                  }`}
-                >
-                  {cat}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="pt-4 flex gap-3">
-             <button 
-                onClick={() => setIsAddModalOpen(false)}
-                className="flex-1 py-3 text-gray-500 font-bold text-sm hover:text-gray-700 dark:hover:text-white"
-             >
-               CANCEL
-             </button>
-             <button 
-                onClick={handleSaveTransaction}
-                disabled={!amount || !description || !category}
-                className="flex-[2] bg-typo-teal text-white rounded-xl py-3 font-display font-bold tracking-wide shadow-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-typo-light transition-colors"
-             >
-               {editingTxId ? 'UPDATE' : 'SAVE'}
-             </button>
-          </div>
-        </div>
-      </Modal>
-
-      {/* Add Inventory Modal */}
-      <Modal
-        isOpen={isInventoryModalOpen}
-        onClose={() => setIsInventoryModalOpen(false)}
-        title="New Stock Item"
-      >
-        <div className="space-y-4">
-          <div>
-             <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-1">Item Name</label>
-             <input 
-               type="text" 
-               autoFocus
-               value={invName}
-               onChange={(e) => setInvName(e.target.value)}
-               className="w-full bg-white dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl p-3 font-medium text-typo-dark dark:text-white focus:ring-2 focus:ring-typo-teal/50 outline-none"
-               placeholder="e.g. White Cotton T-Shirt XL"
-             />
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-             <div>
-               <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-1">Quantity</label>
-               <input 
-                 type="number" 
-                 value={invQuantity}
-                 onChange={(e) => setInvQuantity(e.target.value)}
-                 className="w-full bg-white dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl p-3 font-display font-bold text-lg text-typo-dark dark:text-white focus:ring-2 focus:ring-typo-teal/50 outline-none"
-                 placeholder="0"
-               />
-             </div>
-             <div>
-               <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-1">Unit Cost (MMK)</label>
-               <input 
-                 type="number" 
-                 value={invCost}
-                 onChange={(e) => setInvCost(e.target.value)}
-                 className="w-full bg-white dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl p-3 font-display font-bold text-lg text-typo-dark dark:text-white focus:ring-2 focus:ring-typo-teal/50 outline-none"
-                 placeholder="0"
-               />
-             </div>
-          </div>
-
-          <div>
-             <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-1">Category</label>
-             <div className="flex flex-wrap gap-2">
-                {INVENTORY_CATEGORIES.map((cat) => (
-                   <button 
-                      key={cat}
-                      onClick={() => setInvCategory(cat)}
-                      className={`px-3 py-2 rounded-lg text-xs font-bold transition-all ${
-                         invCategory === cat 
-                         ? 'bg-typo-teal text-white' 
-                         : 'bg-gray-100 dark:bg-white/5 text-gray-500 dark:text-gray-400'
-                      }`}
-                   >
-                      {cat}
-                   </button>
-                ))}
-             </div>
-          </div>
-
-          <div>
-             <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-1">Low Stock Alert Level</label>
-             <input 
-                 type="number" 
-                 value={invReorder}
-                 onChange={(e) => setInvReorder(e.target.value)}
-                 className="w-full bg-white dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl p-3 text-sm text-typo-dark dark:text-white focus:ring-2 focus:ring-typo-teal/50 outline-none"
-             />
-          </div>
-
-          <div className="bg-gray-50 dark:bg-white/5 p-4 rounded-xl flex items-center gap-3">
-             <input 
-               type="checkbox" 
-               id="logExpense" 
-               checked={logAsExpense} 
-               onChange={(e) => setLogAsExpense(e.target.checked)}
-               className="w-5 h-5 rounded text-typo-teal focus:ring-typo-teal"
-             />
-             <label htmlFor="logExpense" className="text-sm text-typo-dark dark:text-white cursor-pointer select-none">
-                <span className="font-bold block">Log as Expense?</span>
-                <span className="text-xs text-gray-500 block">Automatically add total cost to ledger</span>
-             </label>
-          </div>
-
-          <div className="pt-4 flex gap-3">
-             <button 
-                onClick={() => setIsInventoryModalOpen(false)}
-                className="flex-1 py-3 text-gray-500 font-bold text-sm hover:text-gray-700 dark:hover:text-white"
-             >
-               CANCEL
-             </button>
-             <button 
-                onClick={handleAddInventory}
-                disabled={!invName || !invQuantity || !invCost}
-                className="flex-[2] bg-typo-teal text-white rounded-xl py-3 font-display font-bold tracking-wide shadow-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-typo-light transition-colors"
-             >
-               SAVE ITEM
-             </button>
-          </div>
-        </div>
-      </Modal>
-
-      {/* Customer Modal */}
-      <Modal
-         isOpen={isCustomerModalOpen}
-         onClose={() => setIsCustomerModalOpen(false)}
-         title={`${editingCustId ? 'Edit' : 'Add'} Customer`}
-      >
-         <div className="space-y-4">
-            <div>
-               <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-1">Name</label>
+      {/* Main Content */}
+      <main className="flex-1 flex flex-col relative overflow-hidden">
+         {/* Header */}
+         <header className="h-20 border-b border-white/5 flex items-center justify-between px-8 bg-[#020B0B]/95 backdrop-blur z-10">
+            <div className="relative w-96">
+               <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 w-4 h-4" />
                <input 
                   type="text" 
-                  autoFocus
-                  value={custName}
-                  onChange={(e) => setCustName(e.target.value)}
-                  className="w-full bg-white dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl p-3 font-medium text-typo-dark dark:text-white focus:ring-2 focus:ring-typo-teal/50 outline-none"
-                  placeholder="Customer Name"
+                  placeholder="Search products or transactions..." 
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full bg-[#0E2A2A] border border-white/5 rounded-full py-2.5 pl-12 pr-4 text-sm text-white focus:outline-none focus:ring-1 focus:ring-typo-teal placeholder-gray-600"
                />
             </div>
             
-            <div className="grid grid-cols-2 gap-4">
-               <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-1">Phone</label>
-                  <input 
-                     type="text" 
-                     value={custPhone}
-                     onChange={(e) => setCustPhone(e.target.value)}
-                     className="w-full bg-white dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl p-3 text-sm text-typo-dark dark:text-white focus:ring-2 focus:ring-typo-teal/50 outline-none"
-                     placeholder="09..."
-                  />
+            <div className="flex items-center gap-4">
+               {activeTab !== 'dashboard' && (
+                  <div className="bg-[#0E2A2A] px-4 py-2 rounded-lg border border-white/5">
+                     <span className="text-xs text-gray-400 block">CURRENT BALANCE</span>
+                     <span className="text-sm font-bold text-typo-accent">{formatMMK(financials.balance)}</span>
+                  </div>
+               )}
+               <Button onClick={() => setIsInventoryModalOpen(true)} className="!rounded-full !px-6">
+                  <Plus size={16} /> Add Product
+               </Button>
+            </div>
+         </header>
+
+         {/* Content Scroll Area */}
+         <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
+            {activeTab === 'dashboard' && <DashboardView />}
+            
+            {activeTab === 'ledger' && (
+               <div className="space-y-6 animate-in fade-in duration-300">
+                  <div className="flex justify-between items-end">
+                     <div>
+                        <h2 className="font-display font-bold text-3xl text-white">Money In/Out</h2>
+                        <p className="text-gray-400">Track all your business transactions.</p>
+                     </div>
+                     <div className="flex gap-2">
+                        <Button onClick={() => openAddTxModal('expense')} variant="danger"><Minus size={16}/> Expense</Button>
+                        <Button onClick={() => openAddTxModal('income')} variant="success"><Plus size={16}/> Income</Button>
+                     </div>
+                  </div>
+                  
+                  <div className="bg-[#0E2A2A] rounded-2xl border border-white/5 overflow-hidden">
+                     <table className="w-full text-left text-sm">
+                        <thead className="bg-black/20 text-gray-400 font-display text-xs uppercase tracking-wider">
+                           <tr>
+                              <th className="p-4 font-bold">Date</th>
+                              <th className="p-4 font-bold">Description</th>
+                              <th className="p-4 font-bold">Category</th>
+                              <th className="p-4 font-bold text-right">Amount</th>
+                              <th className="p-4 font-bold text-center">Action</th>
+                           </tr>
+                        </thead>
+                        <tbody className="divide-y divide-white/5">
+                           {transactions.filter(t => t.description.toLowerCase().includes(searchTerm.toLowerCase())).map(tx => (
+                              <tr key={tx.id} onClick={() => openEditTxModal(tx)} className="hover:bg-white/5 cursor-pointer transition-colors group">
+                                 <td className="p-4 text-gray-400 font-mono text-xs">{new Date(tx.date).toLocaleDateString()}</td>
+                                 <td className="p-4 font-medium text-white">{tx.description}</td>
+                                 <td className="p-4"><span className="px-2 py-1 rounded bg-white/5 text-gray-400 text-xs">{tx.category}</span></td>
+                                 <td className={`p-4 text-right font-bold ${tx.type === 'income' ? 'text-green-400' : 'text-red-400'}`}>
+                                    {tx.type === 'income' ? '+' : '-'} {formatMMK(tx.amount)}
+                                 </td>
+                                 <td className="p-4 text-center">
+                                    <button onClick={(e) => { e.stopPropagation(); handleDeleteTransaction(tx.id); }} className="p-2 hover:bg-white/10 rounded-lg text-gray-500 hover:text-red-400 transition-colors">
+                                       <Trash2 size={14} />
+                                    </button>
+                                 </td>
+                              </tr>
+                           ))}
+                           {transactions.length === 0 && <tr><td colSpan={5} className="p-8 text-center text-gray-500">No records found.</td></tr>}
+                        </tbody>
+                     </table>
+                  </div>
                </div>
-               <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-1">Email</label>
-                  <input 
-                     type="email" 
-                     value={custEmail}
-                     onChange={(e) => setCustEmail(e.target.value)}
-                     className="w-full bg-white dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl p-3 text-sm text-typo-dark dark:text-white focus:ring-2 focus:ring-typo-teal/50 outline-none"
-                     placeholder="Optional"
-                  />
+            )}
+
+            {activeTab === 'inventory' && (
+               <div className="space-y-6 animate-in fade-in duration-300">
+                  <div className="flex justify-between items-end">
+                     <div>
+                        <h2 className="font-display font-bold text-3xl text-white">Stock Room</h2>
+                        <p className="text-gray-400">Manage your fabric, products and assets.</p>
+                     </div>
+                  </div>
+
+                  <div className="grid grid-cols-4 gap-6">
+                     {inventory.filter(i => i.name.toLowerCase().includes(searchTerm.toLowerCase())).map(item => (
+                        <div key={item.id} className="bg-[#0E2A2A] p-4 rounded-2xl border border-white/5 hover:border-typo-teal/50 transition-colors group relative">
+                           <button onClick={() => handleDeleteInventory(item.id)} className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 p-1.5 hover:bg-red-500/20 text-red-500 rounded-lg transition-all">
+                              <Trash2 size={14} />
+                           </button>
+                           <div className="flex gap-3 mb-3">
+                              <div className="w-10 h-10 rounded-xl bg-typo-teal/20 text-typo-accent flex items-center justify-center">
+                                 <Package size={20} />
+                              </div>
+                              <div>
+                                 <h4 className="font-bold text-white leading-tight">{item.name}</h4>
+                                 <span className="text-[10px] text-gray-400 uppercase tracking-wide">{item.category}</span>
+                              </div>
+                           </div>
+                           <div className="grid grid-cols-2 gap-2 text-xs mb-3 bg-black/20 p-2 rounded-lg">
+                              <div><span className="block text-gray-500">Cost</span>{formatMMK(item.unitCost)}</div>
+                              <div className="text-right"><span className="block text-gray-500">Value</span>{formatMMK(item.unitCost * item.quantity)}</div>
+                           </div>
+                           <div className="flex items-center justify-between">
+                              <button onClick={() => handleAdjustStock(item.id, -1)} className="w-8 h-8 rounded-lg bg-white/5 hover:bg-white/10 flex items-center justify-center"><Minus size={14} /></button>
+                              <span className={`font-bold ${item.quantity <= item.reorderLevel ? 'text-orange-400' : 'text-white'}`}>{item.quantity} Units</span>
+                              <button onClick={() => handleAdjustStock(item.id, 1)} className="w-8 h-8 rounded-lg bg-white/5 hover:bg-white/10 flex items-center justify-center"><Plus size={14} /></button>
+                           </div>
+                        </div>
+                     ))}
+                     <button onClick={() => setIsInventoryModalOpen(true)} className="border-2 border-dashed border-white/10 rounded-2xl p-4 flex flex-col items-center justify-center text-gray-500 hover:text-white hover:border-typo-teal/50 transition-all min-h-[200px]">
+                        <Plus size={32} className="mb-2" />
+                        <span className="font-bold text-sm">Add New Item</span>
+                     </button>
+                  </div>
                </div>
-            </div>
+            )}
 
-            <div>
-               <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-1">Address</label>
-               <textarea 
-                  value={custAddress}
-                  onChange={(e) => setCustAddress(e.target.value)}
-                  className="w-full bg-white dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl p-3 text-sm text-typo-dark dark:text-white focus:ring-2 focus:ring-typo-teal/50 outline-none h-20 resize-none"
-                  placeholder="Delivery Address..."
-               />
-            </div>
+            {activeTab === 'consultant' && <ConsultantView />}
+            
+            {activeTab === 'settings' && (
+               <div className="space-y-6 animate-in fade-in duration-300 max-w-2xl">
+                  <h2 className="font-display font-bold text-3xl text-white">Settings</h2>
+                  
+                  <Card>
+                     <h3 className="font-bold text-white mb-4">Data Management</h3>
+                     <div className="space-y-3">
+                        <Button onClick={() => {
+                           const data = JSON.stringify({ transactions, inventory, customers, profile: businessProfile });
+                           const blob = new Blob([data], { type: 'application/json' });
+                           const url = URL.createObjectURL(blob);
+                           const link = document.createElement('a'); link.href = url; link.download = 'typo_backup.json'; link.click();
+                        }} variant="secondary" className="w-full justify-start"><Download size={16}/> Export Backup</Button>
+                        <Button onClick={handleResetData} variant="danger" className="w-full justify-start"><RotateCcw size={16}/> Reset Everything</Button>
+                     </div>
+                  </Card>
+               </div>
+            )}
+         </div>
+      </main>
 
-            <div>
-               <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-1">Notes</label>
-               <input 
-                  type="text" 
-                  value={custNotes}
-                  onChange={(e) => setCustNotes(e.target.value)}
-                  className="w-full bg-white dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl p-3 text-sm text-typo-dark dark:text-white focus:ring-2 focus:ring-typo-teal/50 outline-none"
-                  placeholder="Sizes, preferences, etc."
-               />
+      {/* --- Modals --- */}
+      
+      {/* Transaction Modal */}
+      <Modal isOpen={isAddModalOpen} onClose={() => setIsAddModalOpen(false)} title={`Add ${newTxType}`}>
+         <div className="space-y-4">
+            <input type="number" autoFocus value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="Amount (MMK)" className="w-full bg-black/20 border border-white/10 rounded-xl p-4 text-2xl font-bold text-white focus:border-typo-teal outline-none" />
+            <input type="text" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Description" className="w-full bg-black/20 border border-white/10 rounded-xl p-3 text-white focus:border-typo-teal outline-none" />
+            <div className="grid grid-cols-2 gap-2">
+               {CATEGORIES[newTxType].map(cat => (
+                  <button key={cat} onClick={() => setCategory(cat)} className={`p-2 rounded-lg text-xs font-bold transition-all ${category === cat ? 'bg-typo-teal text-white' : 'bg-white/5 text-gray-400 hover:bg-white/10'}`}>{cat}</button>
+               ))}
             </div>
-
-            <div className="pt-4 flex gap-3">
-               <button 
-                  onClick={() => setIsCustomerModalOpen(false)}
-                  className="flex-1 py-3 text-gray-500 font-bold text-sm hover:text-gray-700 dark:hover:text-white"
-               >
-                  CANCEL
-               </button>
-               <button 
-                  onClick={handleSaveCustomer}
-                  disabled={!custName}
-                  className="flex-[2] bg-typo-teal text-white rounded-xl py-3 font-display font-bold tracking-wide shadow-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-typo-light transition-colors"
-               >
-                  {editingCustId ? 'UPDATE' : 'SAVE CUSTOMER'}
-               </button>
-            </div>
+            <Button onClick={handleSaveTransaction} className="w-full py-3">{editingTxId ? 'Update' : 'Save'}</Button>
          </div>
       </Modal>
 
-      {/* Business Profile Modal */}
-      <Modal
-        isOpen={showProfileModal}
-        onClose={() => setShowProfileModal(false)}
-        title="Business Profile"
-      >
-        <div className="space-y-4">
-           <div className="flex justify-center mb-6">
-              <div className="w-20 h-20 bg-typo-teal rounded-full flex items-center justify-center text-typo-accent border-4 border-typo-accent shadow-xl text-3xl font-display font-bold">
-                 {profName.charAt(0)}
-              </div>
-           </div>
+      {/* Inventory Modal */}
+      <Modal isOpen={isInventoryModalOpen} onClose={() => setIsInventoryModalOpen(false)} title="New Product">
+         <div className="space-y-4">
+            <input type="text" autoFocus value={invName} onChange={(e) => setInvName(e.target.value)} placeholder="Product Name" className="w-full bg-black/20 border border-white/10 rounded-xl p-3 text-white focus:border-typo-teal outline-none" />
+            <div className="grid grid-cols-2 gap-4">
+               <input type="number" value={invQuantity} onChange={(e) => setInvQuantity(e.target.value)} placeholder="Qty" className="bg-black/20 border border-white/10 rounded-xl p-3 text-white" />
+               <input type="number" value={invCost} onChange={(e) => setInvCost(e.target.value)} placeholder="Unit Cost" className="bg-black/20 border border-white/10 rounded-xl p-3 text-white" />
+            </div>
+            <div className="flex flex-wrap gap-2">
+               {INVENTORY_CATEGORIES.map(cat => (
+                  <button key={cat} onClick={() => setInvCategory(cat)} className={`px-3 py-2 rounded-lg text-xs font-bold ${invCategory === cat ? 'bg-typo-teal text-white' : 'bg-white/5 text-gray-400'}`}>{cat}</button>
+               ))}
+            </div>
+            <label className="flex items-center gap-3 p-3 bg-white/5 rounded-xl cursor-pointer">
+               <input type="checkbox" checked={logAsExpense} onChange={(e) => setLogAsExpense(e.target.checked)} className="rounded text-typo-teal focus:ring-0 bg-black/20 border-white/10" />
+               <span className="text-sm text-gray-300">Log cost as expense?</span>
+            </label>
+            <Button onClick={handleAddInventory} className="w-full py-3">Add to Stock</Button>
+         </div>
+      </Modal>
 
-           <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-1">Business Name</label>
-              <input 
-                type="text" 
-                value={profName}
-                onChange={(e) => setProfName(e.target.value)}
-                className="w-full bg-white dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl p-3 font-display font-bold text-xl text-typo-dark dark:text-white focus:ring-2 focus:ring-typo-teal/50 outline-none"
-              />
-           </div>
-
-           <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-1">Subtitle / Slogan</label>
-              <input 
-                type="text" 
-                value={profSubtitle}
-                onChange={(e) => setProfSubtitle(e.target.value)}
-                className="w-full bg-white dark:bg-black/20 border border-gray-200 dark:border-white/10 rounded-xl p-3 text-sm text-typo-dark dark:text-white focus:ring-2 focus:ring-typo-teal/50 outline-none"
-              />
-           </div>
-
-           <div className="bg-blue-50 dark:bg-blue-900/10 p-4 rounded-xl flex items-start gap-3 mt-4">
-              <UserCircle className="w-5 h-5 text-blue-500 shrink-0 mt-0.5" />
-              <div>
-                 <p className="text-sm font-bold text-blue-700 dark:text-blue-300">Local Profile</p>
-                 <p className="text-xs text-blue-600/70 dark:text-blue-400/70 mt-1">This information is displayed on your dashboard and invoices.</p>
-              </div>
-           </div>
-
-           <div className="pt-4 flex gap-3">
-             <button 
-                onClick={() => setShowProfileModal(false)}
-                className="flex-1 py-3 text-gray-500 font-bold text-sm hover:text-gray-700 dark:hover:text-white"
-             >
-               CANCEL
-             </button>
-             <button 
-                onClick={handleSaveProfile}
-                className="flex-[2] bg-typo-teal text-white rounded-xl py-3 font-display font-bold tracking-wide shadow-lg hover:bg-typo-light transition-colors"
-             >
-               SAVE PROFILE
-             </button>
-          </div>
-        </div>
+      {/* Profile Modal */}
+      <Modal isOpen={showProfileModal} onClose={() => setShowProfileModal(false)} title="Edit Profile">
+         <div className="space-y-4">
+            <input type="text" value={profName} onChange={(e) => setProfName(e.target.value)} className="w-full bg-black/20 border border-white/10 rounded-xl p-3 text-white" />
+            <input type="text" value={profSubtitle} onChange={(e) => setProfSubtitle(e.target.value)} className="w-full bg-black/20 border border-white/10 rounded-xl p-3 text-white" />
+            <input type="text" value={profOwner} onChange={(e) => setProfOwner(e.target.value)} className="w-full bg-black/20 border border-white/10 rounded-xl p-3 text-white" />
+            <Button onClick={() => { setBusinessProfile({ name: profName, subtitle: profSubtitle, owner: profOwner }); setShowProfileModal(false); }} className="w-full">Save Profile</Button>
+         </div>
       </Modal>
 
     </div>
