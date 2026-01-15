@@ -41,6 +41,20 @@ export interface FinancialState {
   totalExpense: number;
 }
 
+export interface ThemeConfig {
+  id: string;
+  name: string;
+  colors: {
+    bgDark: string;
+    bgLight: string;
+    primary: string;
+    accent: string;
+    textMain: string;
+    textMuted: string;
+  };
+  gradient: string;
+}
+
 export const CATEGORIES = {
   income: ['Sales Revenue', 'Wholesale', 'Pre-order', 'Other'],
   expense: ['Inventory (Fabric)', 'Supplies (Ink/Dye)', 'Logistics', 'Marketing', 'Rent/Utilities', 'Salary', 'Other']

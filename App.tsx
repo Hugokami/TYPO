@@ -8,35 +8,26 @@ import {
   Upload, 
   Search, 
   LayoutDashboard,
-  Table2,
   Settings,
   Trash2,
   TrendingUp,
-  Package,
-  AlertTriangle,
   Box,
-  Users,
-  Edit2,
-  Phone,
-  MapPin,
-  FileText,
-  PieChart as PieChartIcon,
-  RotateCcw,
   X,
-  UserCircle,
   Sparkles,
-  ArrowRight,
   Shirt,
-  DollarSign,
   BrainCircuit,
-  TrendingDown,
-  Activity,
   Lightbulb,
-  ShoppingBag,
   Tag,
   Calculator,
-  Filter,
-  FileSpreadsheet
+  FileSpreadsheet,
+  Menu,
+  ChevronLeft,
+  ChevronRight,
+  AlertTriangle,
+  RotateCcw,
+  Edit2,
+  Palette,
+  Check
 } from 'lucide-react';
 import { 
   AreaChart, 
@@ -49,11 +40,9 @@ import {
   PieChart,
   Pie,
   Cell,
-  Legend,
-  BarChart,
-  Bar
+  Legend
 } from 'recharts';
-import { Transaction, FinancialState, CATEGORIES, TransactionType, InventoryItem, INVENTORY_CATEGORIES, InventoryCategory, Customer } from './types';
+import { Transaction, FinancialState, CATEGORIES, TransactionType, InventoryItem, INVENTORY_CATEGORIES, InventoryCategory, Customer, ThemeConfig } from './types';
 
 // --- Utility Functions ---
 
@@ -67,27 +56,89 @@ const formatMMK = (amount: number) => {
 
 const generateId = () => Math.random().toString(36).substr(2, 9);
 
-const COLORS = ['#0E5E5E', '#4ECDC4', '#C4ECE8', '#FF6B6B', '#FFD93D', '#6A0572', '#AB83A1'];
+// --- Theme Presets ---
+
+const THEMES: ThemeConfig[] = [
+  {
+    id: 'ocean',
+    name: 'Ocean Depth',
+    colors: {
+      bgDark: '#051F1F',
+      bgLight: '#0E2A2A',
+      primary: '#0E5E5E',
+      accent: '#C4ECE8',
+      textMain: '#F0F7F7',
+      textMuted: '#9CA3AF'
+    },
+    gradient: 'linear-gradient(135deg, #0E5E5E 0%, #0A4545 100%)'
+  },
+  {
+    id: 'sunset',
+    name: 'Cyber Sunset',
+    colors: {
+      bgDark: '#1A0B14',
+      bgLight: '#2D1222',
+      primary: '#9D174D',
+      accent: '#FBCFE8',
+      textMain: '#FDF2F8',
+      textMuted: '#FDA4AF'
+    },
+    gradient: 'linear-gradient(135deg, #BE185D 0%, #831843 100%)'
+  },
+  {
+    id: 'midnight',
+    name: 'Midnight Pro',
+    colors: {
+      bgDark: '#020617',
+      bgLight: '#0F172A',
+      primary: '#3B82F6',
+      accent: '#BFDBFE',
+      textMain: '#F8FAFC',
+      textMuted: '#94A3B8'
+    },
+    gradient: 'linear-gradient(135deg, #2563EB 0%, #1E40AF 100%)'
+  },
+  {
+    id: 'forest',
+    name: 'Deep Forest',
+    colors: {
+      bgDark: '#052e16',
+      bgLight: '#14532d',
+      primary: '#22c55e',
+      accent: '#dcfce7',
+      textMain: '#f0fdf4',
+      textMuted: '#86efac'
+    },
+    gradient: 'linear-gradient(135deg, #16a34a 0%, #14532d 100%)'
+  }
+];
 
 // --- Components ---
 
-const TypoLogo = () => (
-  <svg viewBox="0 0 100 100" fill="currentColor" className="w-8 h-8 text-typo-dark">
+const ModernTLogo = ({ collapsed = false }: { collapsed?: boolean }) => (
+  <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" className={`${collapsed ? 'w-10 h-10' : 'w-10 h-10'} transition-all duration-500`}>
+    <defs>
+      <linearGradient id="logoGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stopColor="currentColor" stopOpacity="1" />
+        <stop offset="100%" stopColor="var(--color-accent)" stopOpacity="0.7" />
+      </linearGradient>
+    </defs>
     {/* Top Bar */}
-    <path d="M10 15 H 90 V 32 H 10 Z" rx="2" />
-    {/* Bottom Hook Shape */}
-    <path d="M 70 38 L 70 65 A 25 25 0 0 1 20 65 L 38 65 A 10 10 0 0 0 52 65 L 52 38 Z" />
+    <rect x="15" y="15" width="70" height="18" rx="4" fill="url(#logoGradient)" />
+    {/* Vertical Pillar with angle */}
+    <path d="M42 38H58V75C58 80.5228 53.5228 85 48 85H42V38Z" fill="url(#logoGradient)" fillOpacity="0.8" />
+    <path d="M58 38H65V75C65 80.5228 60.5228 85 55 85H58V38Z" fill="currentColor" fillOpacity="0.4" />
   </svg>
 );
 
 const Button = ({ children, onClick, variant = 'primary', className = '' }: { children?: React.ReactNode, onClick?: () => void, variant?: 'primary' | 'secondary' | 'ghost' | 'danger' | 'success', className?: string }) => {
-  const baseStyle = "font-display font-bold tracking-wide rounded-xl px-4 py-2.5 transition-all active:scale-95 flex items-center justify-center gap-2 text-sm backdrop-blur-sm";
+  const baseStyle = "font-display font-bold tracking-wide rounded-xl px-4 py-2.5 transition-all active:scale-95 flex items-center justify-center gap-2 text-sm backdrop-blur-md border";
   const variants = {
-    primary: "bg-typo-accent text-typo-teal hover:bg-white hover:shadow-lg hover:shadow-typo-accent/20",
-    secondary: "bg-typo-teal/80 text-white border border-white/10 hover:bg-typo-teal",
-    ghost: "bg-transparent text-gray-400 hover:text-white hover:bg-white/5",
-    danger: "bg-red-500/10 text-red-500 hover:bg-red-500/20 border border-red-500/10",
-    success: "bg-green-500/10 text-green-500 hover:bg-green-500/20 border border-green-500/10"
+    primary: "bg-typo-teal border-typo-teal text-white shadow-lg shadow-typo-teal/20 hover:brightness-110",
+    secondary: "bg-white/5 border-white/10 text-typo-surface hover:bg-white/10 hover:border-white/20",
+    ghost: "bg-transparent border-transparent text-typo-muted hover:text-typo-surface hover:bg-white/5",
+    danger: "bg-red-500/10 border-red-500/20 text-red-500 hover:bg-red-500/20",
+    success: "bg-green-500/10 border-green-500/20 text-green-500 hover:bg-green-500/20"
   };
 
   return (
@@ -98,7 +149,7 @@ const Button = ({ children, onClick, variant = 'primary', className = '' }: { ch
 };
 
 const Card = ({ children, className = '' }: { children?: React.ReactNode, className?: string }) => (
-  <div className={`bg-[#0E2A2A]/60 backdrop-blur-md rounded-2xl p-6 border border-white/10 hover:border-white/20 transition-colors ${className}`}>
+  <div className={`bg-typo-light/60 backdrop-blur-xl rounded-2xl p-4 sm:p-6 border border-white/5 shadow-xl hover:border-white/10 transition-all duration-300 ${className}`}>
     {children}
   </div>
 );
@@ -106,13 +157,13 @@ const Card = ({ children, className = '' }: { children?: React.ReactNode, classN
 const Modal = ({ isOpen, onClose, title, children }: { isOpen: boolean, onClose: () => void, title: string, children?: React.ReactNode }) => {
   if (!isOpen) return null;
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
-      <div className="bg-[#051F1F] rounded-2xl w-full max-w-md overflow-hidden shadow-2xl border border-white/10 max-h-[90vh] overflow-y-auto custom-scrollbar relative">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-fade-in">
+      <div className="bg-typo-dark rounded-2xl w-full max-w-md overflow-hidden shadow-2xl border border-white/10 max-h-[90vh] overflow-y-auto custom-scrollbar relative ring-1 ring-white/10">
         <button onClick={onClose} className="absolute top-4 right-4 p-2 hover:bg-white/10 rounded-full transition-colors text-white/50 hover:text-white z-10">
             <X className="w-5 h-5" />
         </button>
-        <div className="p-8">
-          <h3 className="font-display font-bold text-2xl tracking-wide text-white mb-6">{title}</h3>
+        <div className="p-6 sm:p-8">
+          <h3 className="font-display font-bold text-2xl tracking-wide text-typo-surface mb-6 border-l-4 border-typo-teal pl-4">{title}</h3>
           {children}
         </div>
       </div>
@@ -134,24 +185,40 @@ export default function App() {
     return saved ? JSON.parse(saved) : [];
   });
   
-  const [customers, setCustomers] = useState<Customer[]>(() => {
-    const saved = localStorage.getItem('typo_customers');
-    return saved ? JSON.parse(saved) : [];
-  });
-
   const [businessProfile, setBusinessProfile] = useState(() => {
     const saved = localStorage.getItem('typo_profile');
     return saved ? JSON.parse(saved) : { name: 'TYPO', subtitle: 'Apparel Co.', owner: 'HUGO' };
   });
 
+  const [currentThemeId, setCurrentThemeId] = useState(() => {
+    return localStorage.getItem('typo_theme_id') || 'ocean';
+  });
+
   // --- Persistence Effects ---
   useEffect(() => localStorage.setItem('typo_transactions', JSON.stringify(transactions)), [transactions]);
   useEffect(() => localStorage.setItem('typo_inventory', JSON.stringify(inventory)), [inventory]);
-  useEffect(() => localStorage.setItem('typo_customers', JSON.stringify(customers)), [customers]);
   useEffect(() => localStorage.setItem('typo_profile', JSON.stringify(businessProfile)), [businessProfile]);
+  useEffect(() => localStorage.setItem('typo_theme_id', currentThemeId), [currentThemeId]);
+
+  // --- Theme Effect ---
+  useEffect(() => {
+    const theme = THEMES.find(t => t.id === currentThemeId) || THEMES[0];
+    const root = document.documentElement;
+    root.style.setProperty('--color-bg-dark', theme.colors.bgDark);
+    root.style.setProperty('--color-bg-light', theme.colors.bgLight);
+    root.style.setProperty('--color-primary', theme.colors.primary);
+    root.style.setProperty('--color-accent', theme.colors.accent);
+    root.style.setProperty('--color-text-main', theme.colors.textMain);
+    root.style.setProperty('--color-text-muted', theme.colors.textMuted);
+    root.style.setProperty('--bg-gradient', theme.gradient);
+  }, [currentThemeId]);
 
   const [activeTab, setActiveTab] = useState<'dashboard' | 'ledger' | 'inventory' | 'consultant' | 'settings'>('dashboard');
   
+  // Sidebar states
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false); // Mobile drawer
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false); // Desktop toggle
+
   // UI States
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [invFilter, setInvFilter] = useState<InventoryCategory | 'All'>('All');
@@ -166,13 +233,14 @@ export default function App() {
   
   // Inventory Form
   const [isInventoryModalOpen, setIsInventoryModalOpen] = useState(false);
+  const [editingInventoryId, setEditingInventoryId] = useState<string | null>(null);
   const [invName, setInvName] = useState('');
   const [invCategory, setInvCategory] = useState<InventoryCategory>('Finished Product');
   const [invQuantity, setInvQuantity] = useState('');
   const [invCost, setInvCost] = useState('');
-  const [invPrice, setInvPrice] = useState(''); // New: Selling Price
-  const [invSize, setInvSize] = useState(''); // New: Size
-  const [invColor, setInvColor] = useState(''); // New: Color
+  const [invPrice, setInvPrice] = useState('');
+  const [invSize, setInvSize] = useState('');
+  const [invColor, setInvColor] = useState('');
   const [invReorder, setInvReorder] = useState('10');
   const [logAsExpense, setLogAsExpense] = useState(false);
 
@@ -180,15 +248,6 @@ export default function App() {
   const [isQuickSellOpen, setIsQuickSellOpen] = useState(false);
   const [selectedItemForSale, setSelectedItemForSale] = useState<InventoryItem | null>(null);
   const [saleQuantity, setSaleQuantity] = useState('1');
-
-  // Customer Form
-  const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false);
-  const [custName, setCustName] = useState('');
-  const [custPhone, setCustPhone] = useState('');
-  const [custEmail, setCustEmail] = useState('');
-  const [custAddress, setCustAddress] = useState('');
-  const [custNotes, setCustNotes] = useState('');
-  const [editingCustId, setEditingCustId] = useState<string | null>(null);
 
   // Profile Form
   const [profName, setProfName] = useState(businessProfile.name);
@@ -227,17 +286,6 @@ export default function App() {
     return data.slice(-10);
   }, [transactions]);
 
-  const pieData = useMemo(() => {
-    const expenseCategories: Record<string, number> = {};
-    transactions.filter(t => t.type === 'expense').forEach(t => {
-      expenseCategories[t.category] = (expenseCategories[t.category] || 0) + t.amount;
-    });
-    return Object.keys(expenseCategories).map(key => ({
-      name: key,
-      value: expenseCategories[key]
-    }));
-  }, [transactions]);
-
   // --- Handlers ---
   const openAddTxModal = (type: TransactionType) => {
     setNewTxType(type);
@@ -265,7 +313,20 @@ export default function App() {
     if (window.confirm('Delete this transaction?')) setTransactions(prev => prev.filter(t => t.id !== id));
   };
   
-  // Enhanced Inventory Handler
+  const openEditInventoryModal = (item: InventoryItem) => {
+    setEditingInventoryId(item.id);
+    setInvName(item.name);
+    setInvCategory(item.category);
+    setInvQuantity(item.quantity.toString());
+    setInvCost(item.unitCost.toString());
+    setInvPrice(item.unitPrice.toString());
+    setInvSize(item.size);
+    setInvColor(item.color);
+    setInvReorder(item.reorderLevel.toString());
+    setLogAsExpense(false); 
+    setIsInventoryModalOpen(true);
+  };
+
   const handleAddInventory = () => {
     if (!invName || !invQuantity || !invCost) return;
     const qty = parseInt(invQuantity);
@@ -273,7 +334,7 @@ export default function App() {
     const price = invPrice ? parseFloat(invPrice) : 0;
     
     const newItem: InventoryItem = {
-      id: generateId(),
+      id: editingInventoryId || generateId(),
       name: invName,
       category: invCategory,
       quantity: qty,
@@ -285,16 +346,20 @@ export default function App() {
       lastUpdated: new Date().toISOString()
     };
     
-    setInventory(prev => [newItem, ...prev]);
-    
-    if (logAsExpense) {
-      setTransactions(prev => [{
-        id: generateId(), date: new Date().toISOString(), amount: qty * cost,
-        description: `Stock Purchase: ${invName} ${invSize} ${invColor} (x${qty})`, type: 'expense', category: 'Inventory (Fabric)'
-      }, ...prev]);
+    if (editingInventoryId) {
+       setInventory(prev => prev.map(i => i.id === editingInventoryId ? newItem : i));
+    } else {
+       setInventory(prev => [newItem, ...prev]);
+       if (logAsExpense) {
+          setTransactions(prev => [{
+            id: generateId(), date: new Date().toISOString(), amount: qty * cost,
+            description: `Stock Purchase: ${invName} ${invSize} ${invColor} (x${qty})`, type: 'expense', category: 'Inventory (Fabric)'
+          }, ...prev]);
+       }
     }
-    // Reset Form
+    
     setInvName(''); setInvCategory('Finished Product'); setInvQuantity(''); setInvCost(''); setInvPrice(''); setInvSize(''); setInvColor('');
+    setEditingInventoryId(null);
     setIsInventoryModalOpen(false);
   };
 
@@ -305,7 +370,6 @@ export default function App() {
     setInventory(prev => prev.map(i => i.id === id ? { ...i, quantity: Math.max(0, i.quantity + val) } : i));
   };
 
-  // Quick Sell Handler
   const openQuickSell = (item: InventoryItem) => {
     setSelectedItemForSale(item);
     setSaleQuantity('1');
@@ -314,28 +378,18 @@ export default function App() {
 
   const executeQuickSell = () => {
     if (!selectedItemForSale || !saleQuantity) return;
-    
     const qty = parseInt(saleQuantity);
     if (qty > selectedItemForSale.quantity) {
         alert("Not enough stock!");
         return;
     }
-
-    // 1. Deduct Stock
     setInventory(prev => prev.map(i => i.id === selectedItemForSale.id ? { ...i, quantity: i.quantity - qty } : i));
-
-    // 2. Add Income Transaction
     const totalSaleAmount = qty * selectedItemForSale.unitPrice;
-    const newTx: Transaction = {
-        id: generateId(),
-        date: new Date().toISOString(),
-        amount: totalSaleAmount,
+    setTransactions(prev => [{
+        id: generateId(), date: new Date().toISOString(), amount: totalSaleAmount,
         description: `Sale: ${selectedItemForSale.name} (${selectedItemForSale.size || ''} ${selectedItemForSale.color || ''}) x${qty}`,
-        type: 'income',
-        category: 'Sales Revenue'
-    };
-    setTransactions(prev => [newTx, ...prev]);
-    
+        type: 'income', category: 'Sales Revenue'
+    }, ...prev]);
     setIsQuickSellOpen(false);
     setSelectedItemForSale(null);
   };
@@ -343,24 +397,18 @@ export default function App() {
   const handleImportBackup = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
-
     const reader = new FileReader();
     reader.onload = (e) => {
       try {
         const json = e.target?.result as string;
         const data = JSON.parse(json);
-        
-        if (window.confirm("Importing will overwrite your current data. Are you sure you want to continue?")) {
+        if (window.confirm("Importing will overwrite your current data. Are you sure?")) {
             if (Array.isArray(data.transactions)) setTransactions(data.transactions);
             if (Array.isArray(data.inventory)) setInventory(data.inventory);
-            if (Array.isArray(data.customers)) setCustomers(data.customers);
             if (data.profile) setBusinessProfile(data.profile);
             alert("Backup imported successfully!");
         }
-      } catch (error) {
-        alert("Error importing file: Invalid format.");
-        console.error(error);
-      }
+      } catch (error) { alert("Error importing file."); }
     };
     reader.readAsText(file);
     event.target.value = ''; 
@@ -378,15 +426,39 @@ export default function App() {
               t.amount
           ].join(","))
       ].join("\n");
-      
       const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.setAttribute('download', `typo_ledger_${new Date().toISOString().split('T')[0]}.csv`);
+      link.setAttribute('download', `ledger_${new Date().toISOString().split('T')[0]}.csv`);
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
+  };
+
+  const handleExportInventoryCSV = () => {
+    const headers = ["Name", "Category", "Size", "Color", "Quantity", "Cost", "Price", "Total Value"];
+    const csvContent = [
+        headers.join(","),
+        ...inventory.map(i => [
+            `"${i.name.replace(/"/g, '""')}"`,
+            i.category,
+            i.size,
+            i.color,
+            i.quantity,
+            i.unitCost,
+            i.unitPrice,
+            (i.quantity * i.unitCost).toFixed(2)
+        ].join(","))
+    ].join("\n");
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `inventory_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   const handleResetData = () => {
@@ -398,415 +470,293 @@ export default function App() {
 
   // --- Views ---
 
-  const DashboardView = () => {
-    const isEmpty = transactions.length === 0 && inventory.length === 0;
-
-    if (isEmpty) {
-      return (
-        <div className="flex flex-col h-full animate-in fade-in duration-500">
-          <div className="mb-8">
-            <h2 className="font-display font-bold text-3xl text-white">Overview</h2>
-            <p className="text-gray-400">Business performance at a glance.</p>
+  const SidebarContent = () => (
+    <>
+      <div className={`h-24 flex items-center px-6 border-b border-white/5 ${isSidebarCollapsed ? 'justify-center' : 'gap-4'} bg-typo-dark/50 backdrop-blur-xl`}>
+        <div className={`text-typo-teal shrink-0`}>
+          <ModernTLogo collapsed={isSidebarCollapsed} />
+        </div>
+        {!isSidebarCollapsed && (
+          <div className="animate-in fade-in duration-300">
+             <span className="font-display font-bold text-2xl tracking-widest text-typo-surface block">{businessProfile.name}</span>
+             <span className="text-[10px] uppercase tracking-widest text-typo-muted block">Business Manager</span>
           </div>
-          
-          <div className="flex-1 border-2 border-dashed border-white/10 rounded-3xl flex flex-col items-center justify-center p-12 bg-[#051F1F]/30 backdrop-blur-sm">
-             <div className="w-16 h-16 bg-typo-teal/20 rounded-2xl flex items-center justify-center mb-6 text-typo-accent animate-pulse">
-                <LayoutDashboard className="w-8 h-8" />
-             </div>
-             <h3 className="font-display font-bold text-2xl text-white mb-2">Start Your Business Journey</h3>
-             <p className="text-gray-400 max-w-md text-center mb-8">Your dashboard is empty. Start by adding your initial inventory or recording your startup expenses.</p>
-             <div className="flex gap-4">
-                <Button onClick={() => setIsInventoryModalOpen(true)} variant="secondary" className="!px-6 !py-3">
-                   <Box className="w-4 h-4" /> Go to Stock Room
-                </Button>
-                <Button onClick={() => openAddTxModal('income')} variant="primary" className="!px-6 !py-3">
-                   <ArrowDownLeft className="w-4 h-4" /> Record Money
-                </Button>
-             </div>
-          </div>
-        </div>
-      );
-    }
-
-    return (
-      <div className="space-y-6 animate-in fade-in duration-500 pb-10">
-        <div>
-           <h2 className="font-display font-bold text-3xl text-white">Overview</h2>
-           <p className="text-gray-400">Welcome back, {businessProfile.owner.split(' ')[0]}.</p>
-        </div>
-
-        <div className="grid grid-cols-3 gap-6">
-           <Card className="col-span-1 bg-gradient-to-br from-typo-teal to-[#0A4545] border-none shadow-xl">
-              <p className="text-typo-accent/80 text-xs font-bold uppercase tracking-wider mb-2">Total Balance</p>
-              <h1 className="text-4xl font-display font-bold text-white mb-4">{formatMMK(financials.balance)}</h1>
-              <div className="flex gap-2">
-                 <div className="flex-1 bg-black/20 rounded-lg p-3">
-                    <div className="flex items-center gap-2 mb-1">
-                       <div className="w-2 h-2 rounded-full bg-green-400"></div>
-                       <span className="text-xs text-gray-300">Income</span>
-                    </div>
-                    <p className="text-lg font-bold text-white">{formatMMK(financials.totalIncome)}</p>
-                 </div>
-                 <div className="flex-1 bg-black/20 rounded-lg p-3">
-                    <div className="flex items-center gap-2 mb-1">
-                       <div className="w-2 h-2 rounded-full bg-red-400"></div>
-                       <span className="text-xs text-gray-300">Expense</span>
-                    </div>
-                    <p className="text-lg font-bold text-white">{formatMMK(financials.totalExpense)}</p>
-                 </div>
-              </div>
-           </Card>
-
-           <Card className="col-span-2 flex flex-col">
-              <div className="flex justify-between items-center mb-4">
-                 <h3 className="font-bold text-white">Cash Flow</h3>
-                 <select className="bg-black/20 border-none text-xs text-gray-400 rounded-lg px-2 py-1">
-                    <option>Last 30 Days</option>
-                 </select>
-              </div>
-              <div className="flex-1 h-[180px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={chartData}>
-                    <defs>
-                      <linearGradient id="colorBalance" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#C4ECE8" stopOpacity={0.3}/>
-                        <stop offset="95%" stopColor="#C4ECE8" stopOpacity={0}/>
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" vertical={false} />
-                    <XAxis dataKey="date" stroke="#ffffff50" fontSize={10} tickLine={false} axisLine={false} />
-                    <YAxis stroke="#ffffff50" fontSize={10} tickLine={false} axisLine={false} tickFormatter={(val) => `${val/1000}k`} />
-                    <Tooltip contentStyle={{ backgroundColor: '#051F1F', borderColor: '#ffffff20', color: '#fff' }} />
-                    <Area type="monotone" dataKey="balance" stroke="#C4ECE8" strokeWidth={3} fillOpacity={1} fill="url(#colorBalance)" />
-                  </AreaChart>
-                </ResponsiveContainer>
-              </div>
-           </Card>
-        </div>
-
-        <div className="grid grid-cols-3 gap-6">
-           <Card className="col-span-1 bg-[#1A1A1A]/80 border-l-4 border-purple-500 backdrop-blur-sm">
-               <div className="flex items-center gap-3 mb-2">
-                   <div className="p-2 bg-purple-500/20 rounded-lg text-purple-400"><Tag size={20} /></div>
-                   <h3 className="font-bold text-white">Potential Revenue</h3>
-               </div>
-               <p className="text-2xl font-display font-bold text-white">{formatMMK(inventoryStats.totalRetailValue)}</p>
-               <p className="text-xs text-gray-500 mt-1">If all current stock is sold</p>
-           </Card>
-
-           <Card className="col-span-1 bg-[#1A1A1A]/80 border-l-4 border-orange-500 backdrop-blur-sm">
-               <div className="flex items-center gap-3 mb-2">
-                   <div className="p-2 bg-orange-500/20 rounded-lg text-orange-400"><Box size={20} /></div>
-                   <h3 className="font-bold text-white">Stock Value (Cost)</h3>
-               </div>
-               <p className="text-2xl font-display font-bold text-white">{formatMMK(inventoryStats.totalCostValue)}</p>
-               <p className="text-xs text-gray-500 mt-1">Total investment in goods</p>
-           </Card>
-
-           <Card className="col-span-1 bg-[#1A1A1A]/80 border-l-4 border-blue-500 backdrop-blur-sm">
-               <div className="flex items-center gap-3 mb-2">
-                   <div className="p-2 bg-blue-500/20 rounded-lg text-blue-400"><TrendingUp size={20} /></div>
-                   <h3 className="font-bold text-white">Potential Profit</h3>
-               </div>
-               <p className="text-2xl font-display font-bold text-white">{formatMMK(inventoryStats.totalRetailValue - inventoryStats.totalCostValue)}</p>
-               <p className="text-xs text-gray-500 mt-1">Revenue minus Cost</p>
-           </Card>
-        </div>
-
-        <div className="grid grid-cols-3 gap-6">
-           <Card className="col-span-2">
-              <div className="flex justify-between items-center mb-4">
-                 <h3 className="font-bold text-white">Recent Transactions</h3>
-                 <Button onClick={() => setActiveTab('ledger')} variant="ghost" className="!p-0 text-xs">View All</Button>
-              </div>
-              <div className="space-y-3">
-                 {transactions.slice(0, 4).map(tx => (
-                    <div key={tx.id} onClick={() => openEditTxModal(tx)} className="flex items-center justify-between p-3 rounded-xl bg-white/5 hover:bg-white/10 transition-colors cursor-pointer group">
-                       <div className="flex items-center gap-3">
-                          <div className={`w-10 h-10 rounded-full flex items-center justify-center ${tx.type === 'income' ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}>
-                             {tx.type === 'income' ? <ArrowDownLeft size={18} /> : <ArrowUpRight size={18} />}
-                          </div>
-                          <div>
-                             <p className="font-bold text-white text-sm">{tx.description}</p>
-                             <p className="text-xs text-gray-500">{new Date(tx.date).toLocaleDateString()}</p>
-                          </div>
-                       </div>
-                       <div className="text-right">
-                          <p className={`font-display font-bold text-sm ${tx.type === 'income' ? 'text-green-400' : 'text-white'}`}>
-                             {tx.type === 'income' ? '+' : '-'} {formatMMK(tx.amount)}
-                          </p>
-                          <p className="text-[10px] text-gray-500">{tx.category}</p>
-                       </div>
-                    </div>
-                 ))}
-              </div>
-           </Card>
-
-           <Card className="col-span-1">
-              <h3 className="font-bold text-white mb-4">Expense Breakdown</h3>
-              <div className="h-[200px]">
-                 <ResponsiveContainer width="100%" height="100%">
-                   <PieChart>
-                     <Pie data={pieData} innerRadius={60} outerRadius={80} paddingAngle={5} dataKey="value">
-                       {pieData.map((entry, index) => <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />)}
-                     </Pie>
-                     <Tooltip contentStyle={{ backgroundColor: '#051F1F', border: 'none', borderRadius: '8px', color: '#fff' }} formatter={(val: number) => formatMMK(val)} />
-                     <Legend iconSize={8} wrapperStyle={{ fontSize: '10px' }} />
-                   </PieChart>
-                 </ResponsiveContainer>
-              </div>
-           </Card>
-        </div>
+        )}
       </div>
-    );
-  };
 
-  const ConsultantView = () => {
-    // Advanced heuristics
-    const netProfit = financials.totalIncome - financials.totalExpense;
-    const margin = financials.totalIncome > 0 ? (netProfit / financials.totalIncome) * 100 : 0;
-    const potentialProfit = inventoryStats.totalRetailValue - inventoryStats.totalCostValue;
-    const stockEfficiency = inventoryStats.totalCostValue > 0 ? (financials.totalIncome / inventoryStats.totalCostValue) : 0;
+      <nav className="flex-1 py-6 px-4 space-y-2 overflow-y-auto custom-scrollbar">
+        {[
+          { id: 'dashboard', icon: LayoutDashboard, label: 'Dashboard' },
+          { id: 'ledger', icon: ArrowDownLeft, label: 'Money In/Out' },
+          { id: 'inventory', icon: Shirt, label: 'Stock Room', badge: inventoryStats.lowStockItems },
+          { id: 'consultant', icon: Sparkles, label: 'AI Consultant' },
+          { id: 'settings', icon: Settings, label: 'Settings' }
+        ].map(item => (
+          <button 
+            key={item.id}
+            onClick={() => { setActiveTab(item.id as any); setIsSidebarOpen(false); }}
+            className={`w-full flex items-center rounded-xl transition-all duration-300 relative group overflow-hidden ${isSidebarCollapsed ? 'justify-center p-3' : 'px-4 py-3.5 gap-3'} ${activeTab === item.id ? 'text-white shadow-lg' : 'text-typo-muted hover:text-white hover:bg-white/5'}`}
+            title={isSidebarCollapsed ? item.label : ''}
+          >
+            {activeTab === item.id && (
+                <div className="absolute inset-0 bg-typo-gradient opacity-100 transition-opacity duration-300 -z-10" />
+            )}
+            <item.icon size={20} className={`shrink-0 z-10 ${activeTab === item.id ? 'text-white' : 'text-typo-muted group-hover:text-typo-accent'}`} />
+            {!isSidebarCollapsed && <span className="font-medium text-sm whitespace-nowrap z-10">{item.label}</span>}
+            
+            {!isSidebarCollapsed && item.badge !== undefined && item.badge > 0 && (
+              <span className="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full ml-auto shadow-sm z-10">
+                {item.badge}
+              </span>
+            )}
+            {isSidebarCollapsed && item.badge !== undefined && item.badge > 0 && (
+              <div className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border border-typo-dark z-10 animate-pulse" />
+            )}
+          </button>
+        ))}
+      </nav>
 
-    let advice = "Your business is just starting. Keep tracking!";
-    if (margin > 30) advice = "Excellent profit margin! Consider reinvesting surplus into high-performing inventory.";
-    else if (margin < 10 && financials.totalIncome > 0) advice = "Margins are tight. Review your supplier costs or consider raising prices.";
-    if (netProfit < 0) advice = "You are currently operating at a loss. Focus on high-margin sales and reducing overhead.";
-    if (potentialProfit > 500000 && financials.balance < 100000) advice = "You have a lot of value tied up in stock. Run a promotion to increase cash flow.";
-
-    return (
-       <div className="space-y-6 animate-in slide-in-from-right duration-300">
-         <div>
-            <h2 className="font-display font-bold text-3xl text-white flex items-center gap-3">
-               <Sparkles className="text-typo-accent" /> AI Consultant
-            </h2>
-            <p className="text-gray-400">Automated insights based on your data.</p>
-         </div>
-
-         <div className="grid grid-cols-3 gap-6">
-            <Card className="bg-gradient-to-br from-purple-900/40 to-typo-dark border-purple-500/20">
-               <div className="flex items-start justify-between mb-4">
-                  <div className="p-2 bg-purple-500/20 rounded-lg text-purple-400"><TrendingUp size={20} /></div>
-                  <span className={`text-xs font-bold px-2 py-1 rounded ${margin > 0 ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}>
-                     {margin.toFixed(1)}%
-                  </span>
-               </div>
-               <p className="text-gray-400 text-xs uppercase tracking-wider font-bold">Realized Profit Margin</p>
-               <h3 className="text-2xl font-display font-bold text-white mt-1">{margin > 0 ? 'Healthy' : 'Needs Work'}</h3>
-            </Card>
-
-            <Card className="bg-gradient-to-br from-orange-900/40 to-typo-dark border-orange-500/20">
-               <div className="flex items-start justify-between mb-4">
-                  <div className="p-2 bg-orange-500/20 rounded-lg text-orange-400"><Calculator size={20} /></div>
-               </div>
-               <p className="text-gray-400 text-xs uppercase tracking-wider font-bold">Projected Profit (Stock)</p>
-               <h3 className="text-2xl font-display font-bold text-white mt-1">{formatMMK(potentialProfit)}</h3>
-            </Card>
-
-            <Card className="bg-gradient-to-br from-blue-900/40 to-typo-dark border-blue-500/20">
-               <div className="flex items-start justify-between mb-4">
-                  <div className="p-2 bg-blue-500/20 rounded-lg text-blue-400"><Box size={20} /></div>
-               </div>
-               <p className="text-gray-400 text-xs uppercase tracking-wider font-bold">Stock Efficiency Ratio</p>
-               <h3 className="text-2xl font-display font-bold text-white mt-1">{stockEfficiency.toFixed(2)}x</h3>
-            </Card>
-         </div>
-
-         <div className="grid grid-cols-2 gap-6">
-            <Card className="col-span-2 relative overflow-hidden">
-               <div className="absolute top-0 right-0 w-64 h-64 bg-typo-accent/5 rounded-full blur-3xl -mr-10 -mt-10"></div>
-               <div className="relative z-10 flex gap-6 items-start">
-                  <div className="w-16 h-16 bg-typo-teal rounded-full flex items-center justify-center shrink-0 border-4 border-[#0E2A2A] shadow-xl">
-                     <BrainCircuit className="w-8 h-8 text-typo-accent" />
-                  </div>
-                  <div>
-                     <h3 className="font-bold text-white text-lg mb-2">Consultant's Assessment</h3>
-                     <p className="text-gray-300 leading-relaxed text-sm mb-4">"{advice}"</p>
-                     
-                     <div className="space-y-2">
-                        <div className="flex items-center gap-2 text-sm text-gray-400">
-                           <Lightbulb size={14} className="text-yellow-400" />
-                           <span>Tip: Keep your expenses logged daily for better accuracy.</span>
-                        </div>
-                     </div>
-                  </div>
-               </div>
-            </Card>
-         </div>
-       </div>
-    );
-  };
-
-  // --- Layout Structure ---
+      <div className="p-4 border-t border-white/5 bg-black/10 backdrop-blur-md">
+        <button 
+          onClick={() => { setShowProfileModal(true); setIsSidebarOpen(false); }} 
+          className={`flex items-center w-full p-2.5 rounded-xl hover:bg-white/5 transition-colors border border-transparent hover:border-white/5 ${isSidebarCollapsed ? 'justify-center' : 'gap-3'}`}
+        >
+          <div className="w-10 h-10 rounded-xl bg-typo-gradient flex items-center justify-center text-white font-bold shadow-lg shrink-0">
+            {profOwner.charAt(0)}
+          </div>
+          {!isSidebarCollapsed && (
+            <div className="text-left overflow-hidden">
+              <p className="text-sm font-bold text-typo-surface truncate">{profOwner}</p>
+              <p className="text-xs text-typo-muted">Administrator</p>
+            </div>
+          )}
+        </button>
+      </div>
+    </>
+  );
 
   return (
-    <div className="flex h-screen bg-[#020B0B] text-typo-surface overflow-hidden font-sans selection:bg-typo-teal selection:text-white">
+    <div className="flex h-screen bg-typo-dark text-typo-surface overflow-hidden font-sans selection:bg-typo-teal selection:text-white transition-colors duration-500">
       
-      {/* Sidebar */}
-      <aside className="w-64 bg-[#051F1F]/90 backdrop-blur-xl border-r border-white/5 flex flex-col shrink-0 transition-all duration-300 z-20">
-         <div className="h-20 flex items-center px-6 border-b border-white/5 gap-3">
-            <div className="w-8 h-8 flex items-center justify-center bg-white rounded-lg">
-                <TypoLogo />
-            </div>
-            <span className="font-display font-bold text-xl tracking-widest text-white">TYPO</span>
-         </div>
+      {/* Sidebar - Desktop */}
+      <aside className={`hidden md:flex flex-col bg-typo-light/30 backdrop-blur-xl border-r border-white/5 shrink-0 transition-all duration-300 z-20 ${isSidebarCollapsed ? 'w-20' : 'w-72'}`}>
+         <SidebarContent />
+         {/* Desktop Collapse Toggle */}
+         <button 
+          onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+          className="absolute -right-3 top-24 w-6 h-6 bg-typo-light text-typo-accent rounded-full flex items-center justify-center border border-white/10 shadow-lg hover:bg-typo-teal hover:text-white transition-colors"
+         >
+           {isSidebarCollapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
+         </button>
+      </aside>
 
-         <nav className="flex-1 py-6 px-3 space-y-1">
-            <button onClick={() => setActiveTab('dashboard')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'dashboard' ? 'bg-typo-teal text-white shadow-lg shadow-black/20' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}>
-               <LayoutDashboard size={20} />
-               <span className="font-medium text-sm">Dashboard</span>
-            </button>
-            <button onClick={() => setActiveTab('ledger')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'ledger' ? 'bg-typo-teal text-white shadow-lg shadow-black/20' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}>
-               <ArrowDownLeft size={20} />
-               <span className="font-medium text-sm">Money In/Out</span>
-            </button>
-            <button onClick={() => setActiveTab('inventory')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all justify-between group ${activeTab === 'inventory' ? 'bg-typo-teal text-white shadow-lg shadow-black/20' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}>
-               <div className="flex items-center gap-3">
-                   <Shirt size={20} />
-                   <span className="font-medium text-sm">Stock Room</span>
-               </div>
-               {inventoryStats.lowStockItems > 0 && (
-                   <span className="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full animate-pulse">
-                       {inventoryStats.lowStockItems}
-                   </span>
-               )}
-            </button>
-            <button onClick={() => setActiveTab('consultant')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'consultant' ? 'bg-typo-teal text-white shadow-lg shadow-black/20' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}>
-               <Sparkles size={20} />
-               <span className="font-medium text-sm">AI Consultant</span>
-            </button>
-            <button onClick={() => setActiveTab('settings')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'settings' ? 'bg-typo-teal text-white shadow-lg shadow-black/20' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}>
-               <Settings size={20} />
-               <span className="font-medium text-sm">Data & Settings</span>
-            </button>
-         </nav>
-
-         <div className="p-4 border-t border-white/5 bg-black/10 backdrop-blur-md">
-            <button onClick={() => setShowProfileModal(true)} className="flex items-center gap-3 w-full p-2 rounded-xl hover:bg-white/5 transition-colors">
-               <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-purple-500 to-blue-500 flex items-center justify-center text-white font-bold border-2 border-[#051F1F]">
-                  {profOwner.charAt(0)}
-               </div>
-               <div className="text-left overflow-hidden">
-                  <p className="text-sm font-bold text-white truncate">{profOwner}</p>
-                  <p className="text-xs text-gray-500">Admin</p>
-               </div>
-            </button>
-         </div>
+      {/* Sidebar - Mobile Drawer */}
+      <div 
+        className={`fixed inset-0 bg-black/60 backdrop-blur-sm z-50 transition-opacity duration-300 md:hidden ${isSidebarOpen ? 'opacity-100 visible' : 'opacity-0 invisible pointer-events-none'}`}
+        onClick={() => setIsSidebarOpen(false)}
+      />
+      <aside className={`fixed top-0 left-0 bottom-0 w-72 bg-typo-dark z-[60] flex flex-col transition-transform duration-300 md:hidden border-r border-white/5 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+         <SidebarContent />
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 flex flex-col relative overflow-hidden">
-         {/* Background Decor */}
-         <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-typo-teal/10 rounded-full blur-[100px] pointer-events-none" />
+      <main className="flex-1 flex flex-col relative overflow-hidden bg-typo-dark">
+         {/* Background Decor - Dynamic */}
+         <div className="absolute top-[-20%] right-[-10%] w-[600px] h-[600px] bg-typo-teal/20 rounded-full blur-[120px] pointer-events-none opacity-50 mix-blend-screen" />
+         <div className="absolute bottom-[-10%] left-[-10%] w-[500px] h-[500px] bg-typo-accent/5 rounded-full blur-[100px] pointer-events-none opacity-30 mix-blend-screen" />
          
          {/* Header */}
-         <header className="h-20 border-b border-white/5 flex items-center justify-between px-8 bg-[#020B0B]/80 backdrop-blur-md z-10">
-            <div className="relative w-96 group">
-               <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 w-4 h-4 group-focus-within:text-typo-accent transition-colors" />
-               <input 
-                  type="text" 
-                  placeholder="Search products or transactions..." 
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full bg-[#0E2A2A]/50 border border-white/5 rounded-full py-2.5 pl-12 pr-4 text-sm text-white focus:outline-none focus:ring-1 focus:ring-typo-teal placeholder-gray-600 transition-all hover:bg-[#0E2A2A]"
-               />
+         <header className="h-16 sm:h-20 border-b border-white/5 flex items-center justify-between px-4 sm:px-8 bg-typo-dark/80 backdrop-blur-md z-10 sticky top-0">
+            <div className="flex items-center gap-3 sm:gap-4 w-full sm:w-auto">
+               <button 
+                onClick={() => setIsSidebarOpen(true)}
+                className="p-2 -ml-2 text-typo-muted hover:text-typo-surface md:hidden transition-colors"
+               >
+                 <Menu size={24} />
+               </button>
+               <div className="relative flex-1 sm:w-96 group">
+                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-typo-muted w-4 h-4 group-focus-within:text-typo-accent transition-colors" />
+                  <input 
+                      type="text" 
+                      placeholder="Search..." 
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="w-full bg-white/5 border border-white/5 rounded-2xl py-2.5 pl-10 pr-4 text-sm text-white focus:outline-none focus:ring-2 focus:ring-typo-teal/50 placeholder-typo-muted transition-all hover:bg-white/10"
+                  />
+               </div>
             </div>
             
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 sm:gap-4">
                {activeTab !== 'dashboard' && (
-                  <div className="bg-[#0E2A2A]/50 backdrop-blur-sm px-4 py-2 rounded-lg border border-white/5 hidden md:block">
-                     <span className="text-xs text-gray-400 block">CURRENT BALANCE</span>
+                  <div className="bg-white/5 backdrop-blur-sm px-4 py-2 rounded-xl border border-white/5 hidden lg:block">
+                     <span className="text-[10px] text-typo-muted block font-bold tracking-wider">BALANCE</span>
                      <span className="text-sm font-bold text-typo-accent">{formatMMK(financials.balance)}</span>
                   </div>
                )}
-               <Button onClick={() => setIsInventoryModalOpen(true)} className="!rounded-full !px-6 shadow-lg shadow-typo-accent/5">
-                  <Plus size={16} /> Add Product
+               <Button onClick={() => { setEditingInventoryId(null); setIsInventoryModalOpen(true); }} className="!rounded-full !px-4 sm:!px-6 shadow-xl shadow-typo-primary/20 hover:-translate-y-0.5 transition-transform">
+                  <Plus size={16} /> <span className="hidden sm:inline">Add Product</span>
                </Button>
             </div>
          </header>
 
          {/* Content Scroll Area */}
-         <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
-            {activeTab === 'dashboard' && <DashboardView />}
+         <div className="flex-1 overflow-y-auto p-4 sm:p-8 custom-scrollbar scroll-smooth">
+            {activeTab === 'dashboard' && (
+              <div className="space-y-8 animate-in fade-in duration-500 pb-10">
+                <div className="flex justify-between items-start">
+                   <div>
+                      <h2 className="font-display font-bold text-2xl sm:text-3xl text-typo-surface">Overview</h2>
+                      <p className="text-typo-muted text-sm mt-1">Real-time business performance.</p>
+                   </div>
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                   <Card className="lg:col-span-1 bg-gradient-to-br from-typo-teal/80 to-typo-light border-none shadow-2xl relative overflow-hidden group">
+                      <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-2xl -mr-10 -mt-10 group-hover:bg-white/20 transition-colors duration-500"></div>
+                      <p className="text-typo-accent/80 text-xs font-bold uppercase tracking-wider mb-2 relative z-10">Total Balance</p>
+                      <h1 className="text-3xl sm:text-5xl font-display font-bold text-white mb-6 relative z-10 tracking-tight">{formatMMK(financials.balance)}</h1>
+                      <div className="flex gap-3 relative z-10">
+                         <div className="flex-1 bg-black/20 rounded-xl p-3 backdrop-blur-sm border border-white/5">
+                            <span className="text-[10px] text-gray-300 block mb-1 font-bold uppercase">Income</span>
+                            <p className="text-sm sm:text-base font-bold text-white">+{formatMMK(financials.totalIncome)}</p>
+                         </div>
+                         <div className="flex-1 bg-black/20 rounded-xl p-3 backdrop-blur-sm border border-white/5">
+                            <span className="text-[10px] text-gray-300 block mb-1 font-bold uppercase">Expense</span>
+                            <p className="text-sm sm:text-base font-bold text-white">-{formatMMK(financials.totalExpense)}</p>
+                         </div>
+                      </div>
+                   </Card>
+
+                   <Card className="lg:col-span-2 flex flex-col min-h-[280px]">
+                      <h3 className="font-bold text-typo-surface mb-4 text-sm flex items-center gap-2">
+                          <TrendingUp size={16} className="text-typo-teal" /> Cash Flow
+                      </h3>
+                      <div className="flex-1 w-full">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <AreaChart data={chartData}>
+                            <defs>
+                              <linearGradient id="colorBalance" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="5%" stopColor="var(--color-primary)" stopOpacity={0.3}/>
+                                <stop offset="95%" stopColor="var(--color-primary)" stopOpacity={0}/>
+                              </linearGradient>
+                            </defs>
+                            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+                            <XAxis dataKey="date" stroke="var(--color-text-muted)" fontSize={10} tickLine={false} axisLine={false} hide={window.innerWidth < 640} />
+                            <YAxis stroke="var(--color-text-muted)" fontSize={10} tickLine={false} axisLine={false} tickFormatter={(val) => `${val/1000}k`} />
+                            <Tooltip contentStyle={{ backgroundColor: 'var(--color-bg-dark)', borderColor: 'rgba(255,255,255,0.1)', color: 'var(--color-text-main)', borderRadius: '12px' }} />
+                            <Area type="monotone" dataKey="balance" stroke="var(--color-accent)" strokeWidth={3} fillOpacity={1} fill="url(#colorBalance)" />
+                          </AreaChart>
+                        </ResponsiveContainer>
+                      </div>
+                   </Card>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
+                   <Card className="border-l-4 border-l-purple-500/50 hover:border-l-purple-500 transition-colors">
+                       <div className="flex items-center gap-3 mb-2">
+                           <Tag size={16} className="text-purple-400" />
+                           <h3 className="font-bold text-typo-muted text-xs uppercase tracking-wider">Revenue Pot.</h3>
+                       </div>
+                       <p className="text-xl sm:text-2xl font-display font-bold text-typo-surface">{formatMMK(inventoryStats.totalRetailValue)}</p>
+                   </Card>
+
+                   <Card className="border-l-4 border-l-orange-500/50 hover:border-l-orange-500 transition-colors">
+                       <div className="flex items-center gap-3 mb-2">
+                           <Box size={16} className="text-orange-400" />
+                           <h3 className="font-bold text-typo-muted text-xs uppercase tracking-wider">Stock Value</h3>
+                       </div>
+                       <p className="text-xl sm:text-2xl font-display font-bold text-typo-surface">{formatMMK(inventoryStats.totalCostValue)}</p>
+                   </Card>
+
+                   <Card className="border-l-4 border-l-blue-500/50 hover:border-l-blue-500 transition-colors">
+                       <div className="flex items-center gap-3 mb-2">
+                           <TrendingUp size={16} className="text-blue-400" />
+                           <h3 className="font-bold text-typo-muted text-xs uppercase tracking-wider">Profit Pot.</h3>
+                       </div>
+                       <p className="text-xl sm:text-2xl font-display font-bold text-typo-surface">{formatMMK(inventoryStats.totalRetailValue - inventoryStats.totalCostValue)}</p>
+                   </Card>
+                </div>
+              </div>
+            )}
             
             {activeTab === 'ledger' && (
                <div className="space-y-6 animate-in fade-in duration-300">
-                  <div className="flex justify-between items-end">
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4">
                      <div>
-                        <h2 className="font-display font-bold text-3xl text-white">Money In/Out</h2>
-                        <p className="text-gray-400">Track all your business transactions.</p>
+                        <h2 className="font-display font-bold text-2xl sm:text-3xl text-typo-surface">Money In/Out</h2>
+                        <p className="text-typo-muted text-sm">Daily financial records.</p>
                      </div>
-                     <div className="flex gap-2">
-                        <Button onClick={handleExportCSV} variant="ghost" className="!px-3"><FileSpreadsheet size={16}/> CSV</Button>
-                        <Button onClick={() => openAddTxModal('expense')} variant="danger"><Minus size={16}/> Expense</Button>
-                        <Button onClick={() => openAddTxModal('income')} variant="success"><Plus size={16}/> Income</Button>
+                     <div className="flex gap-2 w-full sm:w-auto">
+                        <Button onClick={handleExportCSV} variant="ghost" className="flex-1 sm:flex-none"><FileSpreadsheet size={16}/> Export Excel</Button>
+                        <Button onClick={() => openAddTxModal('expense')} variant="danger" className="flex-1 sm:flex-none"><Minus size={16}/> Out</Button>
+                        <Button onClick={() => openAddTxModal('income')} variant="success" className="flex-1 sm:flex-none"><Plus size={16}/> In</Button>
                      </div>
                   </div>
                   
-                  {/* Summary Cards for Ledger */}
-                  <div className="grid grid-cols-3 gap-4">
-                      <div className="bg-[#0E2A2A]/60 p-4 rounded-xl border border-white/5 flex flex-col">
-                          <span className="text-xs text-gray-400 uppercase font-bold tracking-wider">Net Income</span>
-                          <span className={`text-xl font-bold ${financials.balance >= 0 ? 'text-white' : 'text-red-400'}`}>{formatMMK(financials.balance)}</span>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                      <div className="bg-white/5 p-4 rounded-xl border border-white/5">
+                          <span className="text-[10px] text-typo-muted uppercase font-bold tracking-widest">Net Cash</span>
+                          <p className={`text-lg font-bold ${financials.balance >= 0 ? 'text-typo-surface' : 'text-red-400'}`}>{formatMMK(financials.balance)}</p>
                       </div>
-                      <div className="bg-[#0E2A2A]/60 p-4 rounded-xl border border-white/5 flex flex-col">
-                          <span className="text-xs text-gray-400 uppercase font-bold tracking-wider">Total In</span>
-                          <span className="text-xl font-bold text-green-400">+{formatMMK(financials.totalIncome)}</span>
+                      <div className="bg-white/5 p-4 rounded-xl border border-white/5">
+                          <span className="text-[10px] text-typo-muted uppercase font-bold tracking-widest">Inflow</span>
+                          <p className="text-lg font-bold text-green-400">+{formatMMK(financials.totalIncome)}</p>
                       </div>
-                      <div className="bg-[#0E2A2A]/60 p-4 rounded-xl border border-white/5 flex flex-col">
-                          <span className="text-xs text-gray-400 uppercase font-bold tracking-wider">Total Out</span>
-                          <span className="text-xl font-bold text-red-400">-{formatMMK(financials.totalExpense)}</span>
+                      <div className="bg-white/5 p-4 rounded-xl border border-white/5">
+                          <span className="text-[10px] text-typo-muted uppercase font-bold tracking-widest">Outflow</span>
+                          <p className="text-lg font-bold text-red-400">-{formatMMK(financials.totalExpense)}</p>
                       </div>
                   </div>
                   
-                  <div className="bg-[#0E2A2A]/60 backdrop-blur-md rounded-2xl border border-white/5 overflow-hidden">
-                     <table className="w-full text-left text-sm">
-                        <thead className="bg-black/20 text-gray-400 font-display text-xs uppercase tracking-wider">
-                           <tr>
-                              <th className="p-4 font-bold">Date</th>
-                              <th className="p-4 font-bold">Description</th>
-                              <th className="p-4 font-bold">Category</th>
-                              <th className="p-4 font-bold text-right">Amount</th>
-                              <th className="p-4 font-bold text-center">Action</th>
-                           </tr>
-                        </thead>
-                        <tbody className="divide-y divide-white/5">
-                           {transactions.filter(t => t.description.toLowerCase().includes(searchTerm.toLowerCase())).map(tx => (
-                              <tr key={tx.id} onClick={() => openEditTxModal(tx)} className="hover:bg-white/5 cursor-pointer transition-colors group">
-                                 <td className="p-4 text-gray-400 font-mono text-xs">{new Date(tx.date).toLocaleDateString()}</td>
-                                 <td className="p-4 font-medium text-white">{tx.description}</td>
-                                 <td className="p-4"><span className="px-2 py-1 rounded bg-white/5 text-gray-400 text-xs">{tx.category}</span></td>
-                                 <td className={`p-4 text-right font-bold ${tx.type === 'income' ? 'text-green-400' : 'text-red-400'}`}>
-                                    {tx.type === 'income' ? '+' : '-'} {formatMMK(tx.amount)}
-                                 </td>
-                                 <td className="p-4 text-center">
-                                    <button onClick={(e) => { e.stopPropagation(); handleDeleteTransaction(tx.id); }} className="p-2 hover:bg-white/10 rounded-lg text-gray-500 hover:text-red-400 transition-colors">
-                                       <Trash2 size={14} />
-                                    </button>
-                                 </td>
+                  <Card className="!p-0 overflow-hidden">
+                     <div className="overflow-x-auto custom-scrollbar">
+                        <table className="w-full text-left text-sm min-w-[600px]">
+                           <thead className="bg-black/20 text-typo-muted font-display text-xs uppercase tracking-wider backdrop-blur-sm">
+                              <tr>
+                                 <th className="p-4">Date</th>
+                                 <th className="p-4">Description</th>
+                                 <th className="p-4 text-right">Amount</th>
+                                 <th className="p-4 text-center">Action</th>
                               </tr>
-                           ))}
-                           {transactions.length === 0 && <tr><td colSpan={5} className="p-8 text-center text-gray-500">No records found.</td></tr>}
-                        </tbody>
-                     </table>
-                  </div>
+                           </thead>
+                           <tbody className="divide-y divide-white/5">
+                              {transactions.filter(t => t.description.toLowerCase().includes(searchTerm.toLowerCase())).map(tx => (
+                                 <tr key={tx.id} onClick={() => openEditTxModal(tx)} className="hover:bg-white/5 cursor-pointer transition-colors group">
+                                    <td className="p-4 text-typo-muted font-mono text-xs">{new Date(tx.date).toLocaleDateString()}</td>
+                                    <td className="p-4">
+                                       <p className="font-medium text-typo-surface group-hover:text-typo-accent transition-colors">{tx.description}</p>
+                                       <span className="text-[10px] bg-white/5 text-typo-muted px-2 py-0.5 rounded-full border border-white/5">{tx.category}</span>
+                                    </td>
+                                    <td className={`p-4 text-right font-bold ${tx.type === 'income' ? 'text-green-400' : 'text-red-400'}`}>
+                                       {tx.type === 'income' ? '+' : '-'} {formatMMK(tx.amount)}
+                                    </td>
+                                    <td className="p-4 text-center">
+                                       <button onClick={(e) => { e.stopPropagation(); handleDeleteTransaction(tx.id); }} className="p-2 text-typo-muted hover:text-red-400 transition-colors hover:bg-red-500/10 rounded-lg">
+                                          <Trash2 size={14} />
+                                       </button>
+                                    </td>
+                                 </tr>
+                              ))}
+                           </tbody>
+                        </table>
+                     </div>
+                  </Card>
                </div>
             )}
 
             {activeTab === 'inventory' && (
                <div className="space-y-6 animate-in fade-in duration-300">
-                  <div className="flex justify-between items-end">
-                     <div>
-                        <h2 className="font-display font-bold text-3xl text-white">Stock Room</h2>
-                        <p className="text-gray-400">Manage your fabric, products and assets.</p>
-                     </div>
-                     {/* Category Filter */}
-                     <div className="bg-[#0E2A2A]/50 p-1 rounded-xl flex gap-1 border border-white/5">
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                     <h2 className="font-display font-bold text-2xl sm:text-3xl text-typo-surface">Stock Room</h2>
+                     <div className="bg-white/5 p-1 rounded-xl flex gap-1 border border-white/5 overflow-x-auto max-w-full no-scrollbar items-center">
+                         <button onClick={handleExportInventoryCSV} className="px-3 py-1.5 text-xs text-typo-teal bg-typo-accent rounded-lg font-bold mr-2 whitespace-nowrap hover:bg-white flex items-center gap-2 shadow-sm">
+                             <FileSpreadsheet size={12}/> Excel
+                         </button>
                          {['All', ...INVENTORY_CATEGORIES].map(cat => (
                              <button 
                                 key={cat} 
                                 onClick={() => setInvFilter(cat as InventoryCategory | 'All')}
-                                className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${invFilter === cat ? 'bg-typo-teal text-white shadow' : 'text-gray-400 hover:text-white'}`}
+                                className={`px-3 py-1.5 text-[10px] sm:text-xs font-bold rounded-lg transition-all whitespace-nowrap ${invFilter === cat ? 'bg-typo-teal text-white shadow' : 'text-typo-muted hover:text-white'}`}
                              >
                                  {cat}
                              </button>
@@ -814,103 +764,142 @@ export default function App() {
                      </div>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
                      {inventory
                         .filter(i => (invFilter === 'All' || i.category === invFilter))
                         .filter(i => i.name.toLowerCase().includes(searchTerm.toLowerCase()))
                         .map(item => {
                          const margin = item.unitPrice && item.unitCost ? ((item.unitPrice - item.unitCost) / item.unitPrice * 100).toFixed(0) : 0;
                          return (
-                        <div key={item.id} className="bg-[#0E2A2A]/60 backdrop-blur-md p-5 rounded-2xl border border-white/5 hover:border-typo-teal/50 hover:bg-[#0E2A2A]/80 transition-all group relative flex flex-col hover:-translate-y-1 hover:shadow-xl hover:shadow-black/20">
+                        <div key={item.id} className="bg-typo-light/60 backdrop-blur-md p-5 rounded-2xl border border-white/5 hover:border-typo-teal/50 hover:bg-typo-light/80 transition-all duration-300 group relative flex flex-col hover:-translate-y-1 hover:shadow-xl hover:shadow-black/20">
                            <div className="flex justify-between items-start mb-3">
                               <div className="flex gap-3">
-                                <div className="w-12 h-12 rounded-xl bg-typo-teal/20 text-typo-accent flex items-center justify-center shrink-0">
-                                    <Shirt size={22} />
+                                <div className="w-10 h-10 rounded-xl bg-typo-teal/20 text-typo-accent flex items-center justify-center shrink-0 border border-white/5">
+                                    <Shirt size={20} />
                                 </div>
-                                <div>
-                                    <h4 className="font-bold text-white leading-tight mb-1">{item.name}</h4>
-                                    <div className="flex gap-2 text-[10px] uppercase font-bold tracking-wide">
-                                        {item.size && <span className="bg-white/10 text-gray-300 px-1.5 py-0.5 rounded border border-white/5">{item.size}</span>}
-                                        {item.color && <span className="bg-white/10 text-gray-300 px-1.5 py-0.5 rounded border border-white/5">{item.color}</span>}
+                                <div className="overflow-hidden">
+                                    <h4 className="font-bold text-typo-surface leading-tight mb-1 truncate">{item.name}</h4>
+                                    <div className="flex gap-1 text-[9px] uppercase font-bold">
+                                        {item.size && <span className="bg-white/10 text-typo-muted px-1.5 py-0.5 rounded border border-white/5">{item.size}</span>}
+                                        {item.color && <span className="bg-white/10 text-typo-muted px-1.5 py-0.5 rounded truncate max-w-[60px] border border-white/5">{item.color}</span>}
                                     </div>
                                 </div>
                               </div>
-                              <button onClick={() => handleDeleteInventory(item.id)} className="text-gray-600 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100">
-                                  <Trash2 size={16} />
-                              </button>
+                              <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                                <button onClick={() => openEditInventoryModal(item)} className="p-1.5 text-typo-muted hover:text-typo-accent hover:bg-white/10 rounded-lg transition-colors">
+                                    <Edit2 size={14} />
+                                </button>
+                                <button onClick={() => handleDeleteInventory(item.id)} className="p-1.5 text-typo-muted hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-colors">
+                                    <Trash2 size={14} />
+                                </button>
+                              </div>
                            </div>
 
                            <div className="grid grid-cols-2 gap-2 mb-4 bg-black/20 p-3 rounded-xl border border-white/5">
                                 <div>
-                                    <span className="block text-[10px] text-gray-500 uppercase font-bold">Cost</span>
-                                    <span className="text-white font-mono text-sm">{formatMMK(item.unitCost)}</span>
+                                    <span className="block text-[9px] text-typo-muted uppercase font-bold">Cost</span>
+                                    <span className="text-typo-surface font-mono text-xs">{formatMMK(item.unitCost)}</span>
                                 </div>
                                 <div>
-                                    <span className="block text-[10px] text-gray-500 uppercase font-bold">Price</span>
-                                    <span className="text-typo-accent font-bold font-mono text-sm">{item.unitPrice ? formatMMK(item.unitPrice) : '-'}</span>
+                                    <span className="block text-[9px] text-typo-muted uppercase font-bold">Price</span>
+                                    <span className="text-typo-accent font-bold font-mono text-xs">{item.unitPrice ? formatMMK(item.unitPrice) : '-'}</span>
                                 </div>
                            </div>
 
-                           <div className="mt-auto pt-2 border-t border-white/5 flex items-center justify-between">
-                              <div className="flex items-center gap-2">
-                                  <button onClick={() => handleAdjustStock(item.id, -1)} className="w-8 h-8 rounded-lg bg-white/5 hover:bg-white/10 flex items-center justify-center text-white"><Minus size={14} /></button>
-                                  <span className={`font-bold min-w-[3ch] text-center ${item.quantity <= item.reorderLevel ? 'text-red-400' : 'text-white'}`}>{item.quantity}</span>
-                                  <button onClick={() => handleAdjustStock(item.id, 1)} className="w-8 h-8 rounded-lg bg-white/5 hover:bg-white/10 flex items-center justify-center text-white"><Plus size={14} /></button>
+                           <div className="mt-auto pt-3 border-t border-white/5 flex items-center justify-between">
+                              <div className="flex items-center gap-1 bg-black/20 rounded-lg p-1">
+                                  <button onClick={() => handleAdjustStock(item.id, -1)} className="w-6 h-6 rounded-md hover:bg-white/10 flex items-center justify-center text-typo-muted hover:text-white transition-colors"><Minus size={12} /></button>
+                                  <span className={`font-bold min-w-[2.5ch] text-center text-xs ${item.quantity <= item.reorderLevel ? 'text-red-400' : 'text-typo-surface'}`}>{item.quantity}</span>
+                                  <button onClick={() => handleAdjustStock(item.id, 1)} className="w-6 h-6 rounded-md hover:bg-white/10 flex items-center justify-center text-typo-muted hover:text-white transition-colors"><Plus size={12} /></button>
                               </div>
-                              <Button onClick={() => openQuickSell(item)} variant="success" className="!py-1.5 !px-3 !text-xs !rounded-lg">
+                              <Button onClick={() => openQuickSell(item)} variant="success" className="!py-1.5 !px-3 !text-[10px] !rounded-lg !shadow-none">
                                   Sell
                               </Button>
                            </div>
                            
-                           {Number(margin) > 0 && (
-                               <div className="absolute -top-2 -right-2 bg-green-500 text-black text-[10px] font-bold px-2 py-1 rounded-full shadow-lg shadow-green-500/20">
-                                   {margin}% Margin
-                               </div>
-                           )}
-                           
                            {item.quantity <= item.reorderLevel && (
                                <div className="absolute top-2 right-2 text-red-500 animate-pulse" title="Low Stock">
-                                   <AlertTriangle size={16} />
+                                   <AlertTriangle size={14} />
                                </div>
                            )}
                         </div>
                      )})}
                      
-                     <button onClick={() => setIsInventoryModalOpen(true)} className="border-2 border-dashed border-white/10 rounded-2xl p-4 flex flex-col items-center justify-center text-gray-500 hover:text-white hover:border-typo-teal/50 hover:bg-white/5 transition-all min-h-[220px] group">
-                        <div className="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center mb-3 group-hover:bg-typo-accent group-hover:text-typo-teal transition-colors group-hover:scale-110 duration-300">
-                            <Plus size={24} />
+                     <button onClick={() => { setEditingInventoryId(null); setIsInventoryModalOpen(true); }} className="border-2 border-dashed border-white/10 rounded-2xl p-6 flex flex-col items-center justify-center text-typo-muted hover:text-typo-accent hover:border-typo-teal/50 hover:bg-white/5 transition-all duration-300 min-h-[180px] group">
+                        <div className="w-12 h-12 bg-white/5 rounded-full flex items-center justify-center mb-3 group-hover:scale-110 transition-transform group-hover:bg-typo-teal group-hover:text-white">
+                           <Plus size={24} />
                         </div>
-                        <span className="font-bold text-sm">Add New Product</span>
-                        <span className="text-xs text-gray-600 mt-1 text-center px-4 group-hover:text-gray-400">Add fabric, finished shirts, or assets</span>
+                        <span className="font-bold text-sm">Add Item</span>
                      </button>
                   </div>
                </div>
             )}
 
-            {activeTab === 'consultant' && <ConsultantView />}
+            {activeTab === 'consultant' && (
+              <div className="space-y-6 animate-in slide-in-from-right duration-300">
+                <h2 className="font-display font-bold text-2xl sm:text-3xl text-typo-surface">AI Consultant</h2>
+                <Card className="relative overflow-hidden border-typo-teal/30">
+                   <div className="absolute top-0 right-0 w-48 h-48 bg-typo-accent/10 rounded-full blur-3xl -mr-10 -mt-10" />
+                   <div className="flex flex-col sm:flex-row gap-6 items-start">
+                      <div className="w-16 h-16 bg-typo-teal rounded-full flex items-center justify-center shrink-0 border-4 border-typo-dark shadow-xl">
+                         <BrainCircuit className="w-8 h-8 text-white" />
+                      </div>
+                      <div className="space-y-4">
+                         <h3 className="font-bold text-typo-surface text-lg">Financial Health Check</h3>
+                         <p className="text-typo-muted text-sm leading-relaxed max-w-2xl">
+                            Based on your current inflow of <strong>{formatMMK(financials.totalIncome)}</strong> and inventory cost of <strong>{formatMMK(inventoryStats.totalCostValue)}</strong>, your stock turnover appears steady.
+                         </p>
+                         <div className="flex flex-wrap gap-2">
+                            <span className="bg-green-500/10 text-green-400 px-3 py-1 rounded-full text-[10px] font-bold border border-green-500/20">HEALTHY MARGINS</span>
+                            <span className="bg-blue-500/10 text-blue-400 px-3 py-1 rounded-full text-[10px] font-bold border border-blue-500/20">STABLE FLOW</span>
+                         </div>
+                      </div>
+                   </div>
+                </Card>
+              </div>
+            )}
             
             {activeTab === 'settings' && (
-               <div className="space-y-6 animate-in fade-in duration-300 max-w-2xl">
-                  <h2 className="font-display font-bold text-3xl text-white">Settings</h2>
+               <div className="space-y-6 animate-in fade-in duration-300 max-w-xl">
+                  <h2 className="font-display font-bold text-2xl sm:text-3xl text-typo-surface">Settings</h2>
                   
+                  {/* Theme Picker */}
                   <Card>
-                     <h3 className="font-bold text-white mb-4">Data Management</h3>
+                      <h3 className="font-bold text-typo-surface mb-4 text-sm flex items-center gap-2">
+                          <Palette size={16} className="text-typo-teal" /> Theme Appearance
+                      </h3>
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                          {THEMES.map(theme => (
+                              <button 
+                                key={theme.id}
+                                onClick={() => setCurrentThemeId(theme.id)}
+                                className={`relative h-20 rounded-xl overflow-hidden border-2 transition-all ${currentThemeId === theme.id ? 'border-typo-accent scale-105 shadow-lg' : 'border-transparent hover:scale-105'}`}
+                                style={{ background: theme.gradient }}
+                              >
+                                  <div className="absolute inset-0 bg-black/20 hover:bg-transparent transition-colors" />
+                                  <span className="absolute bottom-2 left-2 text-[10px] font-bold text-white uppercase tracking-wider shadow-sm">{theme.name.split(' ')[0]}</span>
+                                  {currentThemeId === theme.id && (
+                                      <div className="absolute top-2 right-2 w-5 h-5 bg-white rounded-full flex items-center justify-center text-typo-teal shadow-md">
+                                          <Check size={12} strokeWidth={4} />
+                                      </div>
+                                  )}
+                              </button>
+                          ))}
+                      </div>
+                  </Card>
+
+                  <Card>
+                     <h3 className="font-bold text-typo-surface mb-4 text-sm">Data Portability</h3>
                      <div className="space-y-3">
                         <Button onClick={() => {
-                           const data = JSON.stringify({ transactions, inventory, customers, profile: businessProfile });
+                           const data = JSON.stringify({ transactions, inventory, profile: businessProfile });
                            const blob = new Blob([data], { type: 'application/json' });
                            const url = URL.createObjectURL(blob);
                            const link = document.createElement('a'); link.href = url; link.download = 'typo_backup.json'; link.click();
-                        }} variant="secondary" className="w-full justify-start"><Download size={16}/> Export Backup</Button>
+                        }} variant="secondary" className="w-full justify-start"><Download size={16}/> Export JSON</Button>
                         
                         <div className="relative">
-                            <input 
-                                type="file" 
-                                ref={fileInputRef} 
-                                onChange={handleImportBackup} 
-                                className="hidden" 
-                                accept=".json"
-                            />
+                            <input type="file" ref={fileInputRef} onChange={handleImportBackup} className="hidden" accept=".json" />
                             <Button onClick={() => fileInputRef.current?.click()} variant="secondary" className="w-full justify-start">
                                 <Upload size={16}/> Import Backup
                             </Button>
@@ -929,128 +918,74 @@ export default function App() {
       {/* Transaction Modal */}
       <Modal isOpen={isAddModalOpen} onClose={() => setIsAddModalOpen(false)} title={`Add ${newTxType}`}>
          <div className="space-y-4">
-            <input type="number" autoFocus value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="Amount (MMK)" className="w-full bg-black/20 border border-white/10 rounded-xl p-4 text-2xl font-bold text-white focus:border-typo-teal outline-none" />
-            <input type="text" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Description" className="w-full bg-black/20 border border-white/10 rounded-xl p-3 text-white focus:border-typo-teal outline-none" />
+            <input type="number" autoFocus value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="Amount (MMK)" className="w-full bg-black/20 border border-white/10 rounded-xl p-4 text-2xl font-bold text-white focus:border-typo-teal focus:bg-black/40 outline-none transition-all" />
+            <input type="text" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="What is this for?" className="w-full bg-black/20 border border-white/10 rounded-xl p-3 text-white focus:border-typo-teal focus:bg-black/40 outline-none transition-all" />
             <div className="grid grid-cols-2 gap-2">
                {CATEGORIES[newTxType].map(cat => (
-                  <button key={cat} onClick={() => setCategory(cat)} className={`p-2 rounded-lg text-xs font-bold transition-all ${category === cat ? 'bg-typo-teal text-white' : 'bg-white/5 text-gray-400 hover:bg-white/10'}`}>{cat}</button>
+                  <button key={cat} onClick={() => setCategory(cat)} className={`p-2 rounded-lg text-xs font-bold transition-all ${category === cat ? 'bg-typo-teal text-white shadow-lg' : 'bg-white/5 text-typo-muted hover:bg-white/10'}`}>{cat}</button>
                ))}
             </div>
-            <Button onClick={handleSaveTransaction} className="w-full py-3">{editingTxId ? 'Update' : 'Save'}</Button>
+            <Button onClick={handleSaveTransaction} className="w-full py-4 shadow-xl">Confirm Entry</Button>
          </div>
       </Modal>
 
       {/* Inventory Modal */}
-      <Modal isOpen={isInventoryModalOpen} onClose={() => setIsInventoryModalOpen(false)} title="Add New Product">
-         <div className="space-y-5">
-            <div>
-                <label className="block text-[10px] uppercase font-bold text-gray-500 mb-1 tracking-wider">Product Name</label>
-                <input type="text" autoFocus value={invName} onChange={(e) => setInvName(e.target.value)} placeholder="e.g. Neon Glitch Tee" className="w-full bg-black/20 border border-white/10 rounded-xl p-3 text-white focus:border-typo-teal outline-none font-medium placeholder-gray-600" />
-            </div>
-            
+      <Modal isOpen={isInventoryModalOpen} onClose={() => setIsInventoryModalOpen(false)} title={editingInventoryId ? "Edit Product" : "New Stock Item"}>
+         <div className="space-y-4">
+            <input type="text" autoFocus value={invName} onChange={(e) => setInvName(e.target.value)} placeholder="Product Name" className="w-full bg-black/20 border border-white/10 rounded-xl p-3 text-white outline-none focus:border-typo-teal transition-colors" />
             <div className="grid grid-cols-2 gap-4">
-               <div>
-                 <label className="block text-[10px] uppercase font-bold text-gray-500 mb-1 tracking-wider">Size</label>
-                 <input type="text" value={invSize} onChange={(e) => setInvSize(e.target.value)} placeholder="L" className="w-full bg-black/20 border border-white/10 rounded-xl p-3 text-white focus:border-typo-teal outline-none placeholder-gray-600" />
-               </div>
-               <div>
-                 <label className="block text-[10px] uppercase font-bold text-gray-500 mb-1 tracking-wider">Color</label>
-                 <input type="text" value={invColor} onChange={(e) => setInvColor(e.target.value)} placeholder="e.g. Black" className="w-full bg-black/20 border border-white/10 rounded-xl p-3 text-white focus:border-typo-teal outline-none placeholder-gray-600" />
-               </div>
+               <input type="text" value={invSize} onChange={(e) => setInvSize(e.target.value)} placeholder="Size" className="w-full bg-black/20 border border-white/10 rounded-xl p-3 text-white outline-none focus:border-typo-teal transition-colors" />
+               <input type="text" value={invColor} onChange={(e) => setInvColor(e.target.value)} placeholder="Color" className="w-full bg-black/20 border border-white/10 rounded-xl p-3 text-white outline-none focus:border-typo-teal transition-colors" />
             </div>
-
             <div className="grid grid-cols-2 gap-4">
-               <div>
-                  <label className="block text-[10px] uppercase font-bold text-gray-500 mb-1 tracking-wider">Cost (MMK)</label>
-                  <input type="number" value={invCost} onChange={(e) => setInvCost(e.target.value)} placeholder="0" className="w-full bg-black/20 border border-white/10 rounded-xl p-3 text-white focus:border-typo-teal outline-none font-mono" />
-               </div>
-               <div>
-                  <label className="block text-[10px] uppercase font-bold text-gray-500 mb-1 tracking-wider">Price (MMK)</label>
-                  <input type="number" value={invPrice} onChange={(e) => setInvPrice(e.target.value)} placeholder="0" className="w-full bg-black/20 border border-white/10 rounded-xl p-3 text-white focus:border-typo-teal outline-none font-mono" />
-               </div>
+               <input type="number" value={invCost} onChange={(e) => setInvCost(e.target.value)} placeholder="Cost/Unit" className="w-full bg-black/20 border border-white/10 rounded-xl p-3 text-white outline-none font-mono focus:border-typo-teal transition-colors" />
+               <input type="number" value={invPrice} onChange={(e) => setInvPrice(e.target.value)} placeholder="Sale/Unit" className="w-full bg-black/20 border border-white/10 rounded-xl p-3 text-white outline-none font-mono focus:border-typo-teal transition-colors" />
             </div>
-
-            {/* Micro-calc: Margin Display */}
-            {invCost && invPrice && (
-                <div className="bg-white/5 rounded-lg p-3 flex items-center justify-between border border-white/5">
-                    <span className="text-xs text-gray-400">Estimated Profit/Unit</span>
-                    <div className="text-right">
-                        <span className="block font-bold text-typo-accent">{formatMMK(parseFloat(invPrice) - parseFloat(invCost))}</span>
-                        <span className="text-[10px] text-gray-500">
-                             {(((parseFloat(invPrice) - parseFloat(invCost)) / parseFloat(invPrice)) * 100).toFixed(1)}% Margin
-                        </span>
-                    </div>
-                </div>
-            )}
-
-            <div>
-                <label className="block text-[10px] uppercase font-bold text-gray-500 mb-1 tracking-wider">Initial Stock</label>
-                <input type="number" value={invQuantity} onChange={(e) => setInvQuantity(e.target.value)} placeholder="0" className="w-full bg-black/20 border border-white/10 rounded-xl p-3 text-white focus:border-typo-teal outline-none font-bold text-lg" />
-            </div>
-
-            <div className="flex flex-wrap gap-2 pt-2">
+            <input type="number" value={invQuantity} onChange={(e) => setInvQuantity(e.target.value)} placeholder="Quantity" className="w-full bg-black/20 border border-white/10 rounded-xl p-3 text-white outline-none focus:border-typo-teal transition-colors" />
+            <div className="flex flex-wrap gap-2">
                {INVENTORY_CATEGORIES.map(cat => (
-                  <button key={cat} onClick={() => setInvCategory(cat)} className={`px-3 py-1.5 rounded-lg text-[10px] uppercase font-bold tracking-wider ${invCategory === cat ? 'bg-typo-teal text-white' : 'bg-white/5 text-gray-500'}`}>{cat}</button>
+                  <button key={cat} onClick={() => setInvCategory(cat)} className={`px-3 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all ${invCategory === cat ? 'bg-typo-teal text-white shadow' : 'bg-white/5 text-typo-muted hover:bg-white/10'}`}>{cat}</button>
                ))}
             </div>
-
             <label className="flex items-center gap-3 p-3 bg-white/5 rounded-xl cursor-pointer hover:bg-white/10 transition-colors">
                <input type="checkbox" checked={logAsExpense} onChange={(e) => setLogAsExpense(e.target.checked)} className="rounded text-typo-teal focus:ring-0 bg-black/20 border-white/10" />
-               <div>
-                   <span className="text-sm font-bold text-white block">Log as Expense?</span>
-                   <span className="text-xs text-gray-500 block">Automatically add total cost to ledger</span>
-               </div>
+               <span className="text-xs text-typo-muted">Log total cost as expense?</span>
             </label>
-
-            <Button onClick={handleAddInventory} className="w-full py-4 text-base bg-typo-accent text-typo-dark hover:bg-white">Save to Inventory</Button>
+            <Button onClick={handleAddInventory} className="w-full py-4">{editingInventoryId ? "Update Product" : "Save to Stock"}</Button>
          </div>
       </Modal>
 
       {/* Quick Sell Modal */}
-      <Modal isOpen={isQuickSellOpen} onClose={() => setIsQuickSellOpen(false)} title="Quick Sale">
+      <Modal isOpen={isQuickSellOpen} onClose={() => setIsQuickSellOpen(false)} title="Register Sale">
          <div className="space-y-6">
-            <div className="bg-white/5 p-4 rounded-xl flex items-center gap-4">
-                 <div className="w-12 h-12 bg-typo-teal/20 rounded-lg flex items-center justify-center text-typo-accent">
-                     <Shirt size={24} />
-                 </div>
+            <div className="flex items-center gap-4 bg-white/5 p-4 rounded-xl border border-white/5">
+                 <Shirt size={32} className="text-typo-accent" />
                  <div>
-                     <h4 className="font-bold text-white text-lg">{selectedItemForSale?.name}</h4>
-                     <p className="text-gray-400 text-sm">{selectedItemForSale?.size} • {selectedItemForSale?.color}</p>
+                     <h4 className="font-bold text-typo-surface">{selectedItemForSale?.name}</h4>
+                     <p className="text-xs text-typo-muted">{selectedItemForSale?.size} • {selectedItemForSale?.color}</p>
                  </div>
             </div>
-
-            <div>
-                <label className="block text-[10px] uppercase font-bold text-gray-500 mb-1 tracking-wider">Quantity to Sell</label>
-                <div className="flex items-center gap-4">
-                     <input 
-                        type="number" 
-                        value={saleQuantity} 
-                        onChange={(e) => setSaleQuantity(e.target.value)}
-                        className="flex-1 bg-black/20 border border-white/10 rounded-xl p-4 text-2xl font-bold text-white text-center focus:border-typo-teal outline-none"
-                        autoFocus
-                     />
-                     <div className="text-right">
-                         <span className="block text-gray-500 text-xs uppercase font-bold">Total</span>
-                         <span className="block text-typo-accent font-bold text-xl">
-                            {formatMMK((parseInt(saleQuantity) || 0) * (selectedItemForSale?.unitPrice || 0))}
-                         </span>
-                     </div>
-                </div>
+            <div className="flex items-center gap-4">
+                 <input type="number" value={saleQuantity} onChange={(e) => setSaleQuantity(e.target.value)} className="flex-1 bg-black/20 border border-white/10 rounded-xl p-4 text-2xl font-bold text-white text-center focus:border-typo-teal outline-none transition-colors" autoFocus />
+                 <div className="text-right shrink-0">
+                     <span className="block text-[10px] text-typo-muted uppercase font-bold">Total Sales</span>
+                     <span className="block text-typo-accent font-bold text-xl">
+                        {formatMMK((parseInt(saleQuantity) || 0) * (selectedItemForSale?.unitPrice || 0))}
+                     </span>
+                 </div>
             </div>
-
-            <Button onClick={executeQuickSell} variant="success" className="w-full py-4 text-lg">
-                Confirm Sale
-            </Button>
+            <Button onClick={executeQuickSell} variant="success" className="w-full py-4 text-lg shadow-xl shadow-green-900/20">Confirm Cash-In</Button>
          </div>
       </Modal>
 
       {/* Profile Modal */}
-      <Modal isOpen={showProfileModal} onClose={() => setShowProfileModal(false)} title="Edit Profile">
+      <Modal isOpen={showProfileModal} onClose={() => setShowProfileModal(false)} title="User Settings">
          <div className="space-y-4">
-            <input type="text" value={profName} onChange={(e) => setProfName(e.target.value)} className="w-full bg-black/20 border border-white/10 rounded-xl p-3 text-white" />
-            <input type="text" value={profSubtitle} onChange={(e) => setProfSubtitle(e.target.value)} className="w-full bg-black/20 border border-white/10 rounded-xl p-3 text-white" />
-            <input type="text" value={profOwner} onChange={(e) => setProfOwner(e.target.value)} className="w-full bg-black/20 border border-white/10 rounded-xl p-3 text-white" />
-            <Button onClick={() => { setBusinessProfile({ name: profName, subtitle: profSubtitle, owner: profOwner }); setShowProfileModal(false); }} className="w-full">Save Profile</Button>
+            <div>
+               <label className="block text-[10px] text-typo-muted uppercase font-bold mb-1">Display Name</label>
+               <input type="text" value={profOwner} onChange={(e) => setProfOwner(e.target.value)} className="w-full bg-black/20 border border-white/10 rounded-xl p-3 text-white outline-none focus:border-typo-teal transition-colors" />
+            </div>
+            <Button onClick={() => { setBusinessProfile({ ...businessProfile, owner: profOwner }); setShowProfileModal(false); }} className="w-full">Update Info</Button>
          </div>
       </Modal>
 

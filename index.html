@@ -14,43 +14,55 @@
           extend: {
             colors: {
               typo: {
-                dark: '#051F1F',    // Deepest background
-                teal: '#0E5E5E',    // Primary card color
-                light: '#1A3C3C',   // Secondary elements
-                accent: '#C4ECE8',  // Mint accent text/buttons
-                surface: '#F0F7F7', // Light mode surface
-                danger: '#FF6B6B',
-                success: '#4ECDC4'
+                dark: 'var(--color-bg-dark)',    // Deepest background
+                teal: 'var(--color-primary)',    // Primary brand color
+                light: 'var(--color-bg-light)',   // Secondary background
+                accent: 'var(--color-accent)',  // Text/Icon accent
+                surface: 'var(--color-text-main)', // Light mode surface
+                muted: 'var(--color-text-muted)',
               }
             },
             fontFamily: {
               sans: ['Inter', 'sans-serif'],
               display: ['Rajdhani', 'sans-serif'],
+            },
+            backgroundImage: {
+              'typo-gradient': 'var(--bg-gradient)',
             }
           }
         }
       }
     </script>
     <style>
+      :root {
+        /* Default Theme (Ocean) */
+        --color-bg-dark: #051F1F;
+        --color-bg-light: #0E2A2A;
+        --color-primary: #0E5E5E;
+        --color-accent: #C4ECE8;
+        --color-text-main: #F0F7F7;
+        --color-text-muted: #9CA3AF;
+        --bg-gradient: linear-gradient(135deg, #0E5E5E 0%, #0A4545 100%);
+      }
+
       body {
-        background-color: #F0F7F7; /* Default light */
+        background-color: var(--color-bg-dark);
+        color: var(--color-text-main);
+        transition: background-color 0.5s ease, color 0.5s ease;
       }
-      @media (prefers-color-scheme: dark) {
-        body {
-          background-color: #051F1F;
-        }
-      }
+
       /* Custom Scrollbar for the table */
       .custom-scrollbar::-webkit-scrollbar {
         width: 6px;
         height: 6px;
       }
       .custom-scrollbar::-webkit-scrollbar-track {
-        background: rgba(14, 94, 94, 0.1);
+        background: rgba(255, 255, 255, 0.05);
       }
       .custom-scrollbar::-webkit-scrollbar-thumb {
-        background: rgba(14, 94, 94, 0.5);
+        background: var(--color-primary);
         border-radius: 10px;
+        opacity: 0.5;
       }
     </style>
   <script type="importmap">
