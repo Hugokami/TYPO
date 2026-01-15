@@ -1,3 +1,4 @@
+// ... (imports remain the same)
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { 
   Plus, 
@@ -185,6 +186,11 @@ export default function App() {
     return saved ? JSON.parse(saved) : [];
   });
   
+  const [customers, setCustomers] = useState<Customer[]>(() => {
+    const saved = localStorage.getItem('typo_customers');
+    return saved ? JSON.parse(saved) : [];
+  });
+
   const [businessProfile, setBusinessProfile] = useState(() => {
     const saved = localStorage.getItem('typo_profile');
     return saved ? JSON.parse(saved) : { name: 'TYPO', subtitle: 'Apparel Co.', owner: 'HUGO' };
@@ -197,6 +203,7 @@ export default function App() {
   // --- Persistence Effects ---
   useEffect(() => localStorage.setItem('typo_transactions', JSON.stringify(transactions)), [transactions]);
   useEffect(() => localStorage.setItem('typo_inventory', JSON.stringify(inventory)), [inventory]);
+  useEffect(() => localStorage.setItem('typo_customers', JSON.stringify(customers)), [customers]);
   useEffect(() => localStorage.setItem('typo_profile', JSON.stringify(businessProfile)), [businessProfile]);
   useEffect(() => localStorage.setItem('typo_theme_id', currentThemeId), [currentThemeId]);
 
@@ -463,8 +470,20 @@ export default function App() {
 
   const handleResetData = () => {
     if (window.confirm("WARNING: This will wipe ALL data and cannot be undone. Are you sure?")) {
-      localStorage.clear();
-      window.location.reload();
+      // Clear all keys
+      localStorage.removeItem('typo_transactions');
+      localStorage.removeItem('typo_inventory');
+      localStorage.removeItem('typo_customers');
+      localStorage.removeItem('typo_profile');
+      
+      // Update state immediately (this triggers re-render with 0/empty values)
+      setTransactions([]);
+      setInventory([]);
+      setCustomers([]);
+      setBusinessProfile({ name: 'TYPO', subtitle: 'Apparel Co.', owner: 'HUGO' });
+      
+      // We purposefully DO NOT reload the page to make it snappy
+      // The state updates above will clear the UI
     }
   };
 
