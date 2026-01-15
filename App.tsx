@@ -34,7 +34,9 @@ import {
   Lightbulb,
   ShoppingBag,
   Tag,
-  Calculator
+  Calculator,
+  Filter,
+  FileSpreadsheet
 } from 'lucide-react';
 import { 
   AreaChart, 
@@ -69,14 +71,23 @@ const COLORS = ['#0E5E5E', '#4ECDC4', '#C4ECE8', '#FF6B6B', '#FFD93D', '#6A0572'
 
 // --- Components ---
 
+const TypoLogo = () => (
+  <svg viewBox="0 0 100 100" fill="currentColor" className="w-8 h-8 text-typo-dark">
+    {/* Top Bar */}
+    <path d="M10 15 H 90 V 32 H 10 Z" rx="2" />
+    {/* Bottom Hook Shape */}
+    <path d="M 70 38 L 70 65 A 25 25 0 0 1 20 65 L 38 65 A 10 10 0 0 0 52 65 L 52 38 Z" />
+  </svg>
+);
+
 const Button = ({ children, onClick, variant = 'primary', className = '' }: { children?: React.ReactNode, onClick?: () => void, variant?: 'primary' | 'secondary' | 'ghost' | 'danger' | 'success', className?: string }) => {
-  const baseStyle = "font-display font-bold tracking-wide rounded-xl px-4 py-2.5 transition-all active:scale-95 flex items-center justify-center gap-2 text-sm";
+  const baseStyle = "font-display font-bold tracking-wide rounded-xl px-4 py-2.5 transition-all active:scale-95 flex items-center justify-center gap-2 text-sm backdrop-blur-sm";
   const variants = {
     primary: "bg-typo-accent text-typo-teal hover:bg-white hover:shadow-lg hover:shadow-typo-accent/20",
-    secondary: "bg-typo-teal text-white border border-white/10 hover:bg-typo-light",
+    secondary: "bg-typo-teal/80 text-white border border-white/10 hover:bg-typo-teal",
     ghost: "bg-transparent text-gray-400 hover:text-white hover:bg-white/5",
-    danger: "bg-red-500/10 text-red-500 hover:bg-red-500/20",
-    success: "bg-green-500/10 text-green-500 hover:bg-green-500/20"
+    danger: "bg-red-500/10 text-red-500 hover:bg-red-500/20 border border-red-500/10",
+    success: "bg-green-500/10 text-green-500 hover:bg-green-500/20 border border-green-500/10"
   };
 
   return (
@@ -87,7 +98,7 @@ const Button = ({ children, onClick, variant = 'primary', className = '' }: { ch
 };
 
 const Card = ({ children, className = '' }: { children?: React.ReactNode, className?: string }) => (
-  <div className={`bg-[#0E2A2A] rounded-2xl p-6 border border-white/5 ${className}`}>
+  <div className={`bg-[#0E2A2A]/60 backdrop-blur-md rounded-2xl p-6 border border-white/10 hover:border-white/20 transition-colors ${className}`}>
     {children}
   </div>
 );
@@ -130,7 +141,7 @@ export default function App() {
 
   const [businessProfile, setBusinessProfile] = useState(() => {
     const saved = localStorage.getItem('typo_profile');
-    return saved ? JSON.parse(saved) : { name: 'TYPO', subtitle: 'Apparel Co.', owner: 'John Manager' };
+    return saved ? JSON.parse(saved) : { name: 'TYPO', subtitle: 'Apparel Co.', owner: 'HUGO' };
   });
 
   // --- Persistence Effects ---
@@ -143,6 +154,7 @@ export default function App() {
   
   // UI States
   const [showProfileModal, setShowProfileModal] = useState(false);
+  const [invFilter, setInvFilter] = useState<InventoryCategory | 'All'>('All');
 
   // Transaction Form
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -353,6 +365,29 @@ export default function App() {
     reader.readAsText(file);
     event.target.value = ''; 
   };
+  
+  const handleExportCSV = () => {
+      const headers = ["Date", "Description", "Type", "Category", "Amount"];
+      const csvContent = [
+          headers.join(","),
+          ...transactions.map(t => [
+              new Date(t.date).toLocaleDateString(),
+              `"${t.description.replace(/"/g, '""')}"`,
+              t.type,
+              t.category,
+              t.amount
+          ].join(","))
+      ].join("\n");
+      
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `typo_ledger_${new Date().toISOString().split('T')[0]}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+  };
 
   const handleResetData = () => {
     if (window.confirm("WARNING: This will wipe ALL data and cannot be undone. Are you sure?")) {
@@ -374,7 +409,7 @@ export default function App() {
             <p className="text-gray-400">Business performance at a glance.</p>
           </div>
           
-          <div className="flex-1 border-2 border-dashed border-white/10 rounded-3xl flex flex-col items-center justify-center p-12 bg-[#051F1F]/50">
+          <div className="flex-1 border-2 border-dashed border-white/10 rounded-3xl flex flex-col items-center justify-center p-12 bg-[#051F1F]/30 backdrop-blur-sm">
              <div className="w-16 h-16 bg-typo-teal/20 rounded-2xl flex items-center justify-center mb-6 text-typo-accent animate-pulse">
                 <LayoutDashboard className="w-8 h-8" />
              </div>
@@ -450,7 +485,7 @@ export default function App() {
         </div>
 
         <div className="grid grid-cols-3 gap-6">
-           <Card className="col-span-1 bg-[#1A1A1A] border-l-4 border-purple-500">
+           <Card className="col-span-1 bg-[#1A1A1A]/80 border-l-4 border-purple-500 backdrop-blur-sm">
                <div className="flex items-center gap-3 mb-2">
                    <div className="p-2 bg-purple-500/20 rounded-lg text-purple-400"><Tag size={20} /></div>
                    <h3 className="font-bold text-white">Potential Revenue</h3>
@@ -459,7 +494,7 @@ export default function App() {
                <p className="text-xs text-gray-500 mt-1">If all current stock is sold</p>
            </Card>
 
-           <Card className="col-span-1 bg-[#1A1A1A] border-l-4 border-orange-500">
+           <Card className="col-span-1 bg-[#1A1A1A]/80 border-l-4 border-orange-500 backdrop-blur-sm">
                <div className="flex items-center gap-3 mb-2">
                    <div className="p-2 bg-orange-500/20 rounded-lg text-orange-400"><Box size={20} /></div>
                    <h3 className="font-bold text-white">Stock Value (Cost)</h3>
@@ -468,7 +503,7 @@ export default function App() {
                <p className="text-xs text-gray-500 mt-1">Total investment in goods</p>
            </Card>
 
-           <Card className="col-span-1 bg-[#1A1A1A] border-l-4 border-blue-500">
+           <Card className="col-span-1 bg-[#1A1A1A]/80 border-l-4 border-blue-500 backdrop-blur-sm">
                <div className="flex items-center gap-3 mb-2">
                    <div className="p-2 bg-blue-500/20 rounded-lg text-blue-400"><TrendingUp size={20} /></div>
                    <h3 className="font-bold text-white">Potential Profit</h3>
@@ -608,10 +643,10 @@ export default function App() {
     <div className="flex h-screen bg-[#020B0B] text-typo-surface overflow-hidden font-sans selection:bg-typo-teal selection:text-white">
       
       {/* Sidebar */}
-      <aside className="w-64 bg-[#051F1F] border-r border-white/5 flex flex-col shrink-0 transition-all duration-300 z-20">
-         <div className="h-20 flex items-center px-6 border-b border-white/5">
-            <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center mr-3">
-               <span className="font-display font-bold text-typo-dark text-xl">T</span>
+      <aside className="w-64 bg-[#051F1F]/90 backdrop-blur-xl border-r border-white/5 flex flex-col shrink-0 transition-all duration-300 z-20">
+         <div className="h-20 flex items-center px-6 border-b border-white/5 gap-3">
+            <div className="w-8 h-8 flex items-center justify-center bg-white rounded-lg">
+                <TypoLogo />
             </div>
             <span className="font-display font-bold text-xl tracking-widest text-white">TYPO</span>
          </div>
@@ -625,9 +660,16 @@ export default function App() {
                <ArrowDownLeft size={20} />
                <span className="font-medium text-sm">Money In/Out</span>
             </button>
-            <button onClick={() => setActiveTab('inventory')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'inventory' ? 'bg-typo-teal text-white shadow-lg shadow-black/20' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}>
-               <Shirt size={20} />
-               <span className="font-medium text-sm">Stock Room</span>
+            <button onClick={() => setActiveTab('inventory')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all justify-between group ${activeTab === 'inventory' ? 'bg-typo-teal text-white shadow-lg shadow-black/20' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}>
+               <div className="flex items-center gap-3">
+                   <Shirt size={20} />
+                   <span className="font-medium text-sm">Stock Room</span>
+               </div>
+               {inventoryStats.lowStockItems > 0 && (
+                   <span className="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full animate-pulse">
+                       {inventoryStats.lowStockItems}
+                   </span>
+               )}
             </button>
             <button onClick={() => setActiveTab('consultant')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'consultant' ? 'bg-typo-teal text-white shadow-lg shadow-black/20' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}>
                <Sparkles size={20} />
@@ -639,7 +681,7 @@ export default function App() {
             </button>
          </nav>
 
-         <div className="p-4 border-t border-white/5">
+         <div className="p-4 border-t border-white/5 bg-black/10 backdrop-blur-md">
             <button onClick={() => setShowProfileModal(true)} className="flex items-center gap-3 w-full p-2 rounded-xl hover:bg-white/5 transition-colors">
                <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-purple-500 to-blue-500 flex items-center justify-center text-white font-bold border-2 border-[#051F1F]">
                   {profOwner.charAt(0)}
@@ -654,27 +696,30 @@ export default function App() {
 
       {/* Main Content */}
       <main className="flex-1 flex flex-col relative overflow-hidden">
+         {/* Background Decor */}
+         <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-typo-teal/10 rounded-full blur-[100px] pointer-events-none" />
+         
          {/* Header */}
-         <header className="h-20 border-b border-white/5 flex items-center justify-between px-8 bg-[#020B0B]/95 backdrop-blur z-10">
-            <div className="relative w-96">
-               <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 w-4 h-4" />
+         <header className="h-20 border-b border-white/5 flex items-center justify-between px-8 bg-[#020B0B]/80 backdrop-blur-md z-10">
+            <div className="relative w-96 group">
+               <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 w-4 h-4 group-focus-within:text-typo-accent transition-colors" />
                <input 
                   type="text" 
                   placeholder="Search products or transactions..." 
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full bg-[#0E2A2A] border border-white/5 rounded-full py-2.5 pl-12 pr-4 text-sm text-white focus:outline-none focus:ring-1 focus:ring-typo-teal placeholder-gray-600"
+                  className="w-full bg-[#0E2A2A]/50 border border-white/5 rounded-full py-2.5 pl-12 pr-4 text-sm text-white focus:outline-none focus:ring-1 focus:ring-typo-teal placeholder-gray-600 transition-all hover:bg-[#0E2A2A]"
                />
             </div>
             
             <div className="flex items-center gap-4">
                {activeTab !== 'dashboard' && (
-                  <div className="bg-[#0E2A2A] px-4 py-2 rounded-lg border border-white/5 hidden md:block">
+                  <div className="bg-[#0E2A2A]/50 backdrop-blur-sm px-4 py-2 rounded-lg border border-white/5 hidden md:block">
                      <span className="text-xs text-gray-400 block">CURRENT BALANCE</span>
                      <span className="text-sm font-bold text-typo-accent">{formatMMK(financials.balance)}</span>
                   </div>
                )}
-               <Button onClick={() => setIsInventoryModalOpen(true)} className="!rounded-full !px-6">
+               <Button onClick={() => setIsInventoryModalOpen(true)} className="!rounded-full !px-6 shadow-lg shadow-typo-accent/5">
                   <Plus size={16} /> Add Product
                </Button>
             </div>
@@ -692,12 +737,29 @@ export default function App() {
                         <p className="text-gray-400">Track all your business transactions.</p>
                      </div>
                      <div className="flex gap-2">
+                        <Button onClick={handleExportCSV} variant="ghost" className="!px-3"><FileSpreadsheet size={16}/> CSV</Button>
                         <Button onClick={() => openAddTxModal('expense')} variant="danger"><Minus size={16}/> Expense</Button>
                         <Button onClick={() => openAddTxModal('income')} variant="success"><Plus size={16}/> Income</Button>
                      </div>
                   </div>
                   
-                  <div className="bg-[#0E2A2A] rounded-2xl border border-white/5 overflow-hidden">
+                  {/* Summary Cards for Ledger */}
+                  <div className="grid grid-cols-3 gap-4">
+                      <div className="bg-[#0E2A2A]/60 p-4 rounded-xl border border-white/5 flex flex-col">
+                          <span className="text-xs text-gray-400 uppercase font-bold tracking-wider">Net Income</span>
+                          <span className={`text-xl font-bold ${financials.balance >= 0 ? 'text-white' : 'text-red-400'}`}>{formatMMK(financials.balance)}</span>
+                      </div>
+                      <div className="bg-[#0E2A2A]/60 p-4 rounded-xl border border-white/5 flex flex-col">
+                          <span className="text-xs text-gray-400 uppercase font-bold tracking-wider">Total In</span>
+                          <span className="text-xl font-bold text-green-400">+{formatMMK(financials.totalIncome)}</span>
+                      </div>
+                      <div className="bg-[#0E2A2A]/60 p-4 rounded-xl border border-white/5 flex flex-col">
+                          <span className="text-xs text-gray-400 uppercase font-bold tracking-wider">Total Out</span>
+                          <span className="text-xl font-bold text-red-400">-{formatMMK(financials.totalExpense)}</span>
+                      </div>
+                  </div>
+                  
+                  <div className="bg-[#0E2A2A]/60 backdrop-blur-md rounded-2xl border border-white/5 overflow-hidden">
                      <table className="w-full text-left text-sm">
                         <thead className="bg-black/20 text-gray-400 font-display text-xs uppercase tracking-wider">
                            <tr>
@@ -738,13 +800,28 @@ export default function App() {
                         <h2 className="font-display font-bold text-3xl text-white">Stock Room</h2>
                         <p className="text-gray-400">Manage your fabric, products and assets.</p>
                      </div>
+                     {/* Category Filter */}
+                     <div className="bg-[#0E2A2A]/50 p-1 rounded-xl flex gap-1 border border-white/5">
+                         {['All', ...INVENTORY_CATEGORIES].map(cat => (
+                             <button 
+                                key={cat} 
+                                onClick={() => setInvFilter(cat as InventoryCategory | 'All')}
+                                className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${invFilter === cat ? 'bg-typo-teal text-white shadow' : 'text-gray-400 hover:text-white'}`}
+                             >
+                                 {cat}
+                             </button>
+                         ))}
+                     </div>
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                     {inventory.filter(i => i.name.toLowerCase().includes(searchTerm.toLowerCase())).map(item => {
+                     {inventory
+                        .filter(i => (invFilter === 'All' || i.category === invFilter))
+                        .filter(i => i.name.toLowerCase().includes(searchTerm.toLowerCase()))
+                        .map(item => {
                          const margin = item.unitPrice && item.unitCost ? ((item.unitPrice - item.unitCost) / item.unitPrice * 100).toFixed(0) : 0;
                          return (
-                        <div key={item.id} className="bg-[#0E2A2A] p-5 rounded-2xl border border-white/5 hover:border-typo-teal/50 transition-colors group relative flex flex-col">
+                        <div key={item.id} className="bg-[#0E2A2A]/60 backdrop-blur-md p-5 rounded-2xl border border-white/5 hover:border-typo-teal/50 hover:bg-[#0E2A2A]/80 transition-all group relative flex flex-col hover:-translate-y-1 hover:shadow-xl hover:shadow-black/20">
                            <div className="flex justify-between items-start mb-3">
                               <div className="flex gap-3">
                                 <div className="w-12 h-12 rounded-xl bg-typo-teal/20 text-typo-accent flex items-center justify-center shrink-0">
@@ -753,12 +830,12 @@ export default function App() {
                                 <div>
                                     <h4 className="font-bold text-white leading-tight mb-1">{item.name}</h4>
                                     <div className="flex gap-2 text-[10px] uppercase font-bold tracking-wide">
-                                        {item.size && <span className="bg-white/10 text-gray-300 px-1.5 py-0.5 rounded">{item.size}</span>}
-                                        {item.color && <span className="bg-white/10 text-gray-300 px-1.5 py-0.5 rounded">{item.color}</span>}
+                                        {item.size && <span className="bg-white/10 text-gray-300 px-1.5 py-0.5 rounded border border-white/5">{item.size}</span>}
+                                        {item.color && <span className="bg-white/10 text-gray-300 px-1.5 py-0.5 rounded border border-white/5">{item.color}</span>}
                                     </div>
                                 </div>
                               </div>
-                              <button onClick={() => handleDeleteInventory(item.id)} className="text-gray-600 hover:text-red-500 transition-colors">
+                              <button onClick={() => handleDeleteInventory(item.id)} className="text-gray-600 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100">
                                   <Trash2 size={16} />
                               </button>
                            </div>
@@ -776,9 +853,9 @@ export default function App() {
 
                            <div className="mt-auto pt-2 border-t border-white/5 flex items-center justify-between">
                               <div className="flex items-center gap-2">
-                                  <button onClick={() => handleAdjustStock(item.id, -1)} className="w-8 h-8 rounded-lg bg-white/5 hover:bg-white/10 flex items-center justify-center"><Minus size={14} /></button>
-                                  <span className={`font-bold min-w-[3ch] text-center ${item.quantity <= item.reorderLevel ? 'text-orange-400' : 'text-white'}`}>{item.quantity}</span>
-                                  <button onClick={() => handleAdjustStock(item.id, 1)} className="w-8 h-8 rounded-lg bg-white/5 hover:bg-white/10 flex items-center justify-center"><Plus size={14} /></button>
+                                  <button onClick={() => handleAdjustStock(item.id, -1)} className="w-8 h-8 rounded-lg bg-white/5 hover:bg-white/10 flex items-center justify-center text-white"><Minus size={14} /></button>
+                                  <span className={`font-bold min-w-[3ch] text-center ${item.quantity <= item.reorderLevel ? 'text-red-400' : 'text-white'}`}>{item.quantity}</span>
+                                  <button onClick={() => handleAdjustStock(item.id, 1)} className="w-8 h-8 rounded-lg bg-white/5 hover:bg-white/10 flex items-center justify-center text-white"><Plus size={14} /></button>
                               </div>
                               <Button onClick={() => openQuickSell(item)} variant="success" className="!py-1.5 !px-3 !text-xs !rounded-lg">
                                   Sell
@@ -786,19 +863,25 @@ export default function App() {
                            </div>
                            
                            {Number(margin) > 0 && (
-                               <div className="absolute -top-2 -right-2 bg-green-500 text-black text-[10px] font-bold px-2 py-1 rounded-full shadow-lg">
+                               <div className="absolute -top-2 -right-2 bg-green-500 text-black text-[10px] font-bold px-2 py-1 rounded-full shadow-lg shadow-green-500/20">
                                    {margin}% Margin
+                               </div>
+                           )}
+                           
+                           {item.quantity <= item.reorderLevel && (
+                               <div className="absolute top-2 right-2 text-red-500 animate-pulse" title="Low Stock">
+                                   <AlertTriangle size={16} />
                                </div>
                            )}
                         </div>
                      )})}
                      
-                     <button onClick={() => setIsInventoryModalOpen(true)} className="border-2 border-dashed border-white/10 rounded-2xl p-4 flex flex-col items-center justify-center text-gray-500 hover:text-white hover:border-typo-teal/50 transition-all min-h-[220px]">
-                        <div className="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center mb-3 group-hover:bg-typo-accent group-hover:text-typo-teal transition-colors">
+                     <button onClick={() => setIsInventoryModalOpen(true)} className="border-2 border-dashed border-white/10 rounded-2xl p-4 flex flex-col items-center justify-center text-gray-500 hover:text-white hover:border-typo-teal/50 hover:bg-white/5 transition-all min-h-[220px] group">
+                        <div className="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center mb-3 group-hover:bg-typo-accent group-hover:text-typo-teal transition-colors group-hover:scale-110 duration-300">
                             <Plus size={24} />
                         </div>
                         <span className="font-bold text-sm">Add New Product</span>
-                        <span className="text-xs text-gray-600 mt-1 text-center px-4">Add fabric, finished shirts, or assets</span>
+                        <span className="text-xs text-gray-600 mt-1 text-center px-4 group-hover:text-gray-400">Add fabric, finished shirts, or assets</span>
                      </button>
                   </div>
                </div>
