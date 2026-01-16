@@ -1,4 +1,3 @@
-// ... (imports remain the same)
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { 
   Plus, 
@@ -28,7 +27,9 @@ import {
   RotateCcw,
   Edit2,
   Palette,
-  Check
+  Check,
+  Delete, // Added for calculator
+  Info
 } from 'lucide-react';
 import { 
   AreaChart, 
@@ -124,9 +125,7 @@ const ModernTLogo = ({ collapsed = false }: { collapsed?: boolean }) => (
         <stop offset="100%" stopColor="var(--color-accent)" stopOpacity="0.7" />
       </linearGradient>
     </defs>
-    {/* Top Bar */}
     <rect x="15" y="15" width="70" height="18" rx="4" fill="url(#logoGradient)" />
-    {/* Vertical Pillar with angle */}
     <path d="M42 38H58V75C58 80.5228 53.5228 85 48 85H42V38Z" fill="url(#logoGradient)" fillOpacity="0.8" />
     <path d="M58 38H65V75C65 80.5228 60.5228 85 55 85H58V38Z" fill="currentColor" fillOpacity="0.4" />
   </svg>
@@ -171,6 +170,110 @@ const Modal = ({ isOpen, onClose, title, children }: { isOpen: boolean, onClose:
     </div>
   );
 };
+
+const Toast = ({ message, type, onClose }: { message: string, type: 'success' | 'error', onClose: () => void }) => (
+    <div className={`fixed bottom-6 right-6 z-[110] px-6 py-4 rounded-xl shadow-2xl flex items-center gap-3 animate-slide-up border ${
+        type === 'success' ? 'bg-[#051F1F] border-green-500/50 text-green-400' : 'bg-[#1F0505] border-red-500/50 text-red-400'
+    }`}>
+        {type === 'success' ? <Check size={20} /> : <AlertTriangle size={20} />}
+        <span className="font-bold text-sm">{message}</span>
+    </div>
+);
+
+// --- Calculator Component ---
+const CalculatorModal = ({ isOpen, onClose }: { isOpen: boolean, onClose: () => void }) => {
+    const [display, setDisplay] = useState('0');
+    const [firstOperand, setFirstOperand] = useState<number | null>(null);
+    const [operator, setOperator] = useState<string | null>(null);
+    const [waitingForSecond, setWaitingForSecond] = useState(false);
+
+    const inputDigit = (digit: string) => {
+        if (waitingForSecond) {
+            setDisplay(digit);
+            setWaitingForSecond(false);
+        } else {
+            setDisplay(display === '0' ? digit : display + digit);
+        }
+    };
+
+    const inputDot = () => {
+        if (!display.includes('.')) {
+            setDisplay(display + '.');
+            setWaitingForSecond(false);
+        }
+    };
+
+    const clear = () => {
+        setDisplay('0');
+        setFirstOperand(null);
+        setOperator(null);
+        setWaitingForSecond(false);
+    };
+
+    const performOp = (nextOperator: string) => {
+        const inputValue = parseFloat(display);
+
+        if (firstOperand === null) {
+            setFirstOperand(inputValue);
+        } else if (operator) {
+            const result = calculate(firstOperand, inputValue, operator);
+            setDisplay(String(result));
+            setFirstOperand(result);
+        }
+
+        setWaitingForSecond(true);
+        setOperator(nextOperator);
+    };
+
+    const calculate = (first: number, second: number, op: string) => {
+        if (op === '+') return first + second;
+        if (op === '-') return first - second;
+        if (op === '*') return first * second;
+        if (op === '/') return first / second;
+        return second;
+    };
+
+    if (!isOpen) return null;
+
+    return (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-fade-in">
+             <div className="bg-typo-dark rounded-2xl w-full max-w-xs shadow-2xl border border-white/10 p-4 ring-1 ring-white/10">
+                 <div className="flex justify-between items-center mb-4">
+                     <h3 className="text-white font-display font-bold flex items-center gap-2"><Calculator size={16}/> Calculator</h3>
+                     <button onClick={onClose}><X size={16} className="text-gray-400 hover:text-white"/></button>
+                 </div>
+                 <div className="bg-black/40 rounded-xl p-4 mb-4 text-right">
+                    <span className="text-gray-400 text-xs h-4 block">{firstOperand} {operator}</span>
+                    <div className="text-3xl font-mono text-white font-bold truncate">{display}</div>
+                 </div>
+                 <div className="grid grid-cols-4 gap-2">
+                     {['C', '/', '*', 'Del'].map((btn) => (
+                         <button key={btn} 
+                            onClick={() => {
+                                if(btn === 'C') clear();
+                                else if(btn === 'Del') setDisplay(display.length > 1 ? display.slice(0, -1) : '0');
+                                else performOp(btn);
+                            }}
+                            className={`p-3 rounded-lg font-bold transition-colors ${btn === 'C' ? 'bg-red-500/20 text-red-400' : 'bg-typo-teal/20 text-typo-teal'}`}>
+                            {btn === 'Del' ? <Delete size={18} className="mx-auto"/> : btn}
+                         </button>
+                     ))}
+                     {['7', '8', '9', '-'].map(btn => (
+                         <button key={btn} onClick={() => isNaN(Number(btn)) ? performOp(btn) : inputDigit(btn)} className={`p-3 rounded-lg font-bold ${isNaN(Number(btn)) ? 'bg-typo-teal/20 text-typo-teal' : 'bg-white/5 text-white hover:bg-white/10'}`}>{btn}</button>
+                     ))}
+                     {['4', '5', '6', '+'].map(btn => (
+                         <button key={btn} onClick={() => isNaN(Number(btn)) ? performOp(btn) : inputDigit(btn)} className={`p-3 rounded-lg font-bold ${isNaN(Number(btn)) ? 'bg-typo-teal/20 text-typo-teal' : 'bg-white/5 text-white hover:bg-white/10'}`}>{btn}</button>
+                     ))}
+                     {['1', '2', '3', '='].map(btn => (
+                         <button key={btn} onClick={() => btn === '=' ? performOp('=') : inputDigit(btn)} className={`p-3 rounded-lg font-bold ${btn === '=' ? 'bg-typo-accent text-typo-teal row-span-2 flex items-center justify-center' : 'bg-white/5 text-white hover:bg-white/10'}`} style={btn === '=' ? { gridRow: 'span 2' } : {}}>{btn}</button>
+                     ))}
+                     <button onClick={() => inputDigit('0')} className="col-span-2 p-3 rounded-lg font-bold bg-white/5 text-white hover:bg-white/10">0</button>
+                     <button onClick={inputDot} className="p-3 rounded-lg font-bold bg-white/5 text-white hover:bg-white/10">.</button>
+                 </div>
+             </div>
+        </div>
+    );
+}
 
 // --- Main App ---
 
@@ -228,7 +331,9 @@ export default function App() {
 
   // UI States
   const [showProfileModal, setShowProfileModal] = useState(false);
+  const [isCalculatorOpen, setIsCalculatorOpen] = useState(false);
   const [invFilter, setInvFilter] = useState<InventoryCategory | 'All'>('All');
+  const [notification, setNotification] = useState<{message: string, type: 'success' | 'error'} | null>(null);
 
   // Transaction Form
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -293,6 +398,18 @@ export default function App() {
     return data.slice(-10);
   }, [transactions]);
 
+  // --- Effects ---
+  useEffect(() => {
+      if (notification) {
+          const timer = setTimeout(() => setNotification(null), 3000);
+          return () => clearTimeout(timer);
+      }
+  }, [notification]);
+
+  const showNotification = (message: string, type: 'success' | 'error') => {
+      setNotification({ message, type });
+  };
+
   // --- Handlers ---
   const openAddTxModal = (type: TransactionType) => {
     setNewTxType(type);
@@ -302,8 +419,17 @@ export default function App() {
   const openEditTxModal = (tx: Transaction) => {
     setNewTxType(tx.type); setEditingTxId(tx.id); setAmount(tx.amount.toString()); setDescription(tx.description); setCategory(tx.category); setIsAddModalOpen(true);
   };
+  
   const handleSaveTransaction = () => {
-    if (!amount || !description || !category) return;
+    if (!amount || !description || !category) {
+        showNotification("Please fill in all fields", "error");
+        return;
+    }
+    if (parseFloat(amount) <= 0) {
+        showNotification("Amount must be greater than 0", "error");
+        return;
+    }
+
     const newTx: Transaction = {
       id: editingTxId || generateId(),
       date: editingTxId ? transactions.find(t => t.id === editingTxId)!.date : new Date().toISOString(),
@@ -314,10 +440,16 @@ export default function App() {
     };
     if (editingTxId) setTransactions(prev => prev.map(t => t.id === editingTxId ? newTx : t));
     else setTransactions(prev => [newTx, ...prev]);
+    
     setIsAddModalOpen(false);
+    showNotification(editingTxId ? "Transaction updated" : "Transaction added", "success");
   };
+
   const handleDeleteTransaction = (id: string) => {
-    if (window.confirm('Delete this transaction?')) setTransactions(prev => prev.filter(t => t.id !== id));
+    if (window.confirm('Delete this transaction?')) {
+        setTransactions(prev => prev.filter(t => t.id !== id));
+        showNotification("Transaction deleted", "success");
+    }
   };
   
   const openEditInventoryModal = (item: InventoryItem) => {
@@ -335,7 +467,10 @@ export default function App() {
   };
 
   const handleAddInventory = () => {
-    if (!invName || !invQuantity || !invCost) return;
+    if (!invName || !invQuantity || !invCost) {
+        showNotification("Name, Quantity and Cost are required", "error");
+        return;
+    }
     const qty = parseInt(invQuantity);
     const cost = parseFloat(invCost);
     const price = invPrice ? parseFloat(invPrice) : 0;
@@ -355,6 +490,7 @@ export default function App() {
     
     if (editingInventoryId) {
        setInventory(prev => prev.map(i => i.id === editingInventoryId ? newItem : i));
+       showNotification("Product updated", "success");
     } else {
        setInventory(prev => [newItem, ...prev]);
        if (logAsExpense) {
@@ -362,6 +498,9 @@ export default function App() {
             id: generateId(), date: new Date().toISOString(), amount: qty * cost,
             description: `Stock Purchase: ${invName} ${invSize} ${invColor} (x${qty})`, type: 'expense', category: 'Inventory (Fabric)'
           }, ...prev]);
+          showNotification("Product added & expense logged", "success");
+       } else {
+          showNotification("Product added to stock", "success");
        }
     }
     
@@ -371,7 +510,10 @@ export default function App() {
   };
 
   const handleDeleteInventory = (id: string) => {
-    if (window.confirm('Remove item?')) setInventory(prev => prev.filter(i => i.id !== id));
+    if (window.confirm('Remove item?')) {
+        setInventory(prev => prev.filter(i => i.id !== id));
+        showNotification("Item removed", "success");
+    }
   };
   const handleAdjustStock = (id: string, val: number) => {
     setInventory(prev => prev.map(i => i.id === id ? { ...i, quantity: Math.max(0, i.quantity + val) } : i));
@@ -387,7 +529,7 @@ export default function App() {
     if (!selectedItemForSale || !saleQuantity) return;
     const qty = parseInt(saleQuantity);
     if (qty > selectedItemForSale.quantity) {
-        alert("Not enough stock!");
+        showNotification("Not enough stock!", "error");
         return;
     }
     setInventory(prev => prev.map(i => i.id === selectedItemForSale.id ? { ...i, quantity: i.quantity - qty } : i));
@@ -399,6 +541,7 @@ export default function App() {
     }, ...prev]);
     setIsQuickSellOpen(false);
     setSelectedItemForSale(null);
+    showNotification(`Sold ${qty}x ${selectedItemForSale.name}`, "success");
   };
 
   const handleImportBackup = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -413,19 +556,33 @@ export default function App() {
             if (Array.isArray(data.transactions)) setTransactions(data.transactions);
             if (Array.isArray(data.inventory)) setInventory(data.inventory);
             if (data.profile) setBusinessProfile(data.profile);
-            alert("Backup imported successfully!");
+            showNotification("Backup imported successfully!", "success");
         }
-      } catch (error) { alert("Error importing file."); }
+      } catch (error) { showNotification("Error importing file.", "error"); }
     };
     reader.readAsText(file);
     event.target.value = ''; 
   };
   
   const handleExportCSV = () => {
+      const summary = [
+          "FINANCIAL REPORT",
+          `Generated on,${new Date().toLocaleDateString()}`,
+          `Net Balance,${financials.balance}`,
+          `Total Income,${financials.totalIncome}`,
+          `Total Expense,${financials.totalExpense}`,
+          "", // Blank line
+      ];
+
       const headers = ["Date", "Description", "Type", "Category", "Amount"];
+      
+      // Sort for export
+      const sortedTx = [...transactions].sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
       const csvContent = [
+          ...summary,
           headers.join(","),
-          ...transactions.map(t => [
+          ...sortedTx.map(t => [
               new Date(t.date).toLocaleDateString(),
               `"${t.description.replace(/"/g, '""')}"`,
               t.type,
@@ -433,19 +590,32 @@ export default function App() {
               t.amount
           ].join(","))
       ].join("\n");
+      
       const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.setAttribute('download', `ledger_${new Date().toISOString().split('T')[0]}.csv`);
+      link.setAttribute('download', `financial_report_${new Date().toISOString().split('T')[0]}.csv`);
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
+      showNotification("Financial report downloaded", "success");
   };
 
   const handleExportInventoryCSV = () => {
-    const headers = ["Name", "Category", "Size", "Color", "Quantity", "Cost", "Price", "Total Value"];
+    const summary = [
+        "INVENTORY REPORT",
+        `Generated on,${new Date().toLocaleDateString()}`,
+        `Total Items,${inventory.length}`,
+        `Total Cost Value,${inventoryStats.totalCostValue}`,
+        `Total Retail Value,${inventoryStats.totalRetailValue}`,
+        "",
+    ];
+
+    const headers = ["Name", "Category", "Size", "Color", "Quantity", "Cost", "Price", "Total Value (Cost)", "Total Value (Retail)"];
+    
     const csvContent = [
+        ...summary,
         headers.join(","),
         ...inventory.map(i => [
             `"${i.name.replace(/"/g, '""')}"`,
@@ -455,17 +625,20 @@ export default function App() {
             i.quantity,
             i.unitCost,
             i.unitPrice,
-            (i.quantity * i.unitCost).toFixed(2)
+            (i.quantity * i.unitCost).toFixed(2),
+            (i.quantity * i.unitPrice).toFixed(2)
         ].join(","))
     ].join("\n");
+    
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.setAttribute('download', `inventory_${new Date().toISOString().split('T')[0]}.csv`);
+    link.setAttribute('download', `inventory_report_${new Date().toISOString().split('T')[0]}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    showNotification("Inventory report downloaded", "success");
   };
 
   const handleResetData = () => {
@@ -476,14 +649,12 @@ export default function App() {
       localStorage.removeItem('typo_customers');
       localStorage.removeItem('typo_profile');
       
-      // Update state immediately (this triggers re-render with 0/empty values)
+      // Update state immediately
       setTransactions([]);
       setInventory([]);
       setCustomers([]);
       setBusinessProfile({ name: 'TYPO', subtitle: 'Apparel Co.', owner: 'HUGO' });
-      
-      // We purposefully DO NOT reload the page to make it snappy
-      // The state updates above will clear the UI
+      showNotification("System reset complete", "success");
     }
   };
 
@@ -535,7 +706,18 @@ export default function App() {
         ))}
       </nav>
 
-      <div className="p-4 border-t border-white/5 bg-black/10 backdrop-blur-md">
+      <div className="p-4 border-t border-white/5 bg-black/10 backdrop-blur-md space-y-2">
+        <button 
+            onClick={() => setIsCalculatorOpen(true)}
+            className={`flex items-center w-full p-2.5 rounded-xl hover:bg-white/5 transition-colors border border-transparent hover:border-white/5 text-typo-teal ${isSidebarCollapsed ? 'justify-center' : 'gap-3'}`}
+            title="Calculator"
+        >
+            <div className="w-8 h-8 rounded-lg bg-typo-teal/10 flex items-center justify-center shrink-0">
+                <Calculator size={18} />
+            </div>
+             {!isSidebarCollapsed && <span className="text-sm font-bold">Calculator</span>}
+        </button>
+
         <button 
           onClick={() => { setShowProfileModal(true); setIsSidebarOpen(false); }} 
           className={`flex items-center w-full p-2.5 rounded-xl hover:bg-white/5 transition-colors border border-transparent hover:border-white/5 ${isSidebarCollapsed ? 'justify-center' : 'gap-3'}`}
@@ -557,6 +739,9 @@ export default function App() {
   return (
     <div className="flex h-screen bg-typo-dark text-typo-surface overflow-hidden font-sans selection:bg-typo-teal selection:text-white transition-colors duration-500">
       
+      {/* Notifications */}
+      {notification && <Toast message={notification.message} type={notification.type} onClose={() => setNotification(null)} />}
+
       {/* Sidebar - Desktop */}
       <aside className={`hidden md:flex flex-col bg-typo-light/30 backdrop-blur-xl border-r border-white/5 shrink-0 transition-all duration-300 z-20 ${isSidebarCollapsed ? 'w-20' : 'w-72'}`}>
          <SidebarContent />
@@ -706,7 +891,7 @@ export default function App() {
                         <p className="text-typo-muted text-sm">Daily financial records.</p>
                      </div>
                      <div className="flex gap-2 w-full sm:w-auto">
-                        <Button onClick={handleExportCSV} variant="ghost" className="flex-1 sm:flex-none"><FileSpreadsheet size={16}/> Export Excel</Button>
+                        <Button onClick={handleExportCSV} variant="ghost" className="flex-1 sm:flex-none"><FileSpreadsheet size={16}/> Export Report</Button>
                         <Button onClick={() => openAddTxModal('expense')} variant="danger" className="flex-1 sm:flex-none"><Minus size={16}/> Out</Button>
                         <Button onClick={() => openAddTxModal('income')} variant="success" className="flex-1 sm:flex-none"><Plus size={16}/> In</Button>
                      </div>
@@ -739,7 +924,10 @@ export default function App() {
                               </tr>
                            </thead>
                            <tbody className="divide-y divide-white/5">
-                              {transactions.filter(t => t.description.toLowerCase().includes(searchTerm.toLowerCase())).map(tx => (
+                              {transactions
+                                .filter(t => t.description.toLowerCase().includes(searchTerm.toLowerCase()))
+                                .sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+                                .map(tx => (
                                  <tr key={tx.id} onClick={() => openEditTxModal(tx)} className="hover:bg-white/5 cursor-pointer transition-colors group">
                                     <td className="p-4 text-typo-muted font-mono text-xs">{new Date(tx.date).toLocaleDateString()}</td>
                                     <td className="p-4">
@@ -769,7 +957,7 @@ export default function App() {
                      <h2 className="font-display font-bold text-2xl sm:text-3xl text-typo-surface">Stock Room</h2>
                      <div className="bg-white/5 p-1 rounded-xl flex gap-1 border border-white/5 overflow-x-auto max-w-full no-scrollbar items-center">
                          <button onClick={handleExportInventoryCSV} className="px-3 py-1.5 text-xs text-typo-teal bg-typo-accent rounded-lg font-bold mr-2 whitespace-nowrap hover:bg-white flex items-center gap-2 shadow-sm">
-                             <FileSpreadsheet size={12}/> Excel
+                             <FileSpreadsheet size={12}/> Excel Report
                          </button>
                          {['All', ...INVENTORY_CATEGORIES].map(cat => (
                              <button 
@@ -934,6 +1122,9 @@ export default function App() {
 
       {/* --- Modals --- */}
       
+      {/* Calculator Modal */}
+      <CalculatorModal isOpen={isCalculatorOpen} onClose={() => setIsCalculatorOpen(false)} />
+
       {/* Transaction Modal */}
       <Modal isOpen={isAddModalOpen} onClose={() => setIsAddModalOpen(false)} title={`Add ${newTxType}`}>
          <div className="space-y-4">
