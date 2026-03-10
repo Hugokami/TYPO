@@ -736,6 +736,8 @@ export default function App() {
     </>
   );
 
+  const lowerSearchTerm = searchTerm.toLowerCase();
+
   return (
     <div className="flex h-screen bg-typo-dark text-typo-surface overflow-hidden font-sans selection:bg-typo-teal selection:text-white transition-colors duration-500">
       
@@ -925,7 +927,7 @@ export default function App() {
                            </thead>
                            <tbody className="divide-y divide-white/5">
                               {transactions
-                                .filter(t => t.description.toLowerCase().includes(searchTerm.toLowerCase()))
+                                .filter(t => t.description.toLowerCase().includes(lowerSearchTerm))
                                 .sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime())
                                 .map(tx => (
                                  <tr key={tx.id} onClick={() => openEditTxModal(tx)} className="hover:bg-white/5 cursor-pointer transition-colors group">
@@ -974,7 +976,7 @@ export default function App() {
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
                      {inventory
                         .filter(i => (invFilter === 'All' || i.category === invFilter))
-                        .filter(i => i.name.toLowerCase().includes(searchTerm.toLowerCase()))
+                        .filter(i => i.name.toLowerCase().includes(lowerSearchTerm))
                         .map(item => {
                          const margin = item.unitPrice && item.unitCost ? ((item.unitPrice - item.unitCost) / item.unitPrice * 100).toFixed(0) : 0;
                          return (
